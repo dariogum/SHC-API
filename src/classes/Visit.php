@@ -136,9 +136,13 @@ class Visit {
 					"type" => "visit",
 					"id" => $visit->id,
 					"attributes" => [
-						"name" => $visit->name,
-						"description" => $visit->description,
-						"type" => $visit->type,
+						"patient" => $visit->patient,
+						"date" => $visit->date,
+						"weight" => $visit->weight,
+						"height" => $visit->height,
+						"perimeter" => $visit->perimeter,
+						"diagnosis" => $visit->diagnosis,
+						"treatment" => $visit->treatment,
 					],
 				];
 			}
@@ -169,9 +173,13 @@ class Visit {
 			"type" => "visit",
 			"id" => $id,
 			"attributes" => [
-				"name" => $visit->name,
-				"description" => $visit->description,
-				"type" => $visit->type,
+				"patient" => $visit->patient,
+				"date" => $visit->date,
+				"weight" => $visit->weight,
+				"height" => $visit->height,
+				"perimeter" => $visit->perimeter,
+				"diagnosis" => $visit->diagnosis,
+				"treatment" => $visit->treatment,
 			],
 		];
 

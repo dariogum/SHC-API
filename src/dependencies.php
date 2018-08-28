@@ -31,13 +31,13 @@ $container['db'] = function ($c) {
 
 $container[\App\Classes\Patient::class] = function ($c) {
 	$logger = $c->get('logger');
-	$table = $c->get('db')->table('projects');
+	$table = $c->get('db')->table('patients');
 	$visitsTable = $c->get('db')->table('visits');
-	return new \App\Classes\Project($logger, $table, $visitsTable);
+	return new \App\Classes\Patient($logger, $table, $visitsTable);
 };
 
 $container[\App\Classes\Visit::class] = function ($c) {
 	$logger = $c->get('logger');
 	$table = $c->get('db')->table('visits');
-	return new \App\Classes\Status($logger, $table);
+	return new \App\Classes\Visit($logger, $table);
 };

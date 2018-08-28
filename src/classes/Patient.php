@@ -103,7 +103,7 @@ class Patient {
 						$newResponse = $response->withJson($errors, 400);
 						return $newResponse;
 					}
-					$query = $query->where($column[0], 'like', '%' . $column[1] . '%');
+					$query = $query->orWhere($column[0], 'like', '%' . $column[1] . '%');
 				}
 			}
 
@@ -139,23 +139,43 @@ class Patient {
 				$patients = [];
 			} else {
 				foreach ($patients as $patient) {
-					if ($patient) {
-						$visitsQuery = $this->visitsTable->table;
-						$visitsQuery = $query->where('patient_id', 'like', '%' . $patient->id . '%');
-						$visits = $visitsQuery->get();
-
-						$data[] = [
-							"type" => "patient",
-							"id" => $patient->id,
-							"attributes" => [
-								"name" => $patient->name,
-								"lastname" => $patient->lastname,
-							],
-							"relationships" => [
-								"visits" => $visits,
-							],
-						];
-					}
+					$data[] = [
+						"type" => "patient",
+						"id" => $patient->id,
+						"attributes" => [
+							"lastname" => $patient->lastname,
+							"name" => $patient->name,
+							"birthday" => $patient->birthday,
+							"gender" => $patient->gender,
+							"docType" => $patient->docType,
+							"doc" => $patient->doc,
+							"phone1" => $patient->phone1,
+							"phone2" => $patient->phone2,
+							"country" => $patient->country,
+							"state" => $patient->state,
+							"city" => $patient->city,
+							"street" => $patient->street,
+							"number" => $patient->number,
+							"floor" => $patient->floor,
+							"apartment" => $patient->apartment,
+							"socialSecurity1" => $patient->socialSecurity1,
+							"socialSecurity1Number" => $patient->socialSecurity1Number,
+							"socialSecurity2" => $patient->socialSecurity2,
+							"socialSecurity2Number" => $patient->socialSecurity2Number,
+							"birthType" => $patient->birthType,
+							"weightNewborn" => $patient->weightNewborn,
+							"bloodType" => $patient->bloodType,
+							"rhFactor" => $patient->rhFactor,
+							"apgar" => $patient->apgar,
+							"gestationalAge" => $patient->gestationalAge,
+							"comments" => $patient->comments,
+							"father" => $patient->father,
+							"mother" => $patient->mother,
+							"brothers" => $patient->brothers,
+							"others" => $patient->others,
+						],
+						"relationships" => [],
+					];
 				}
 			}
 
@@ -179,23 +199,56 @@ class Patient {
 	private function getOne($id) {
 		$this->logger->info("Get a Patient");
 
+		$result = [];
+		$data = [];
+
 		$patient = $this->table->find($id);
 
-		$data = [
-			"type" => "patient",
-			"id" => $id,
-			"attributes" => [
-				"name" => $patient->name,
-				"lastname" => $patient->lastname,
-			],
-			"relationships" => [],
-		];
-
 		if ($patient) {
-			$visitsQuery = $this->visitsTable->table;
-			$visitsQuery = $query->where('patient_id', 'like', '%' . $patient->id . '%');
+			$visitsQuery = $this->visitsTable;
+			$visitsQuery = $visitsQuery->where('patient', $patient->id);
 			$visits = $visitsQuery->get();
-			$data['relationships']['visits'] = $visits;
+
+			$data = [
+				"type" => "patient",
+				"id" => $id,
+				"attributes" => [
+					"lastname" => $patient->lastname,
+					"name" => $patient->name,
+					"birthday" => $patient->birthday,
+					"gender" => $patient->gender,
+					"docType" => $patient->docType,
+					"doc" => $patient->doc,
+					"phone1" => $patient->phone1,
+					"phone2" => $patient->phone2,
+					"country" => $patient->country,
+					"state" => $patient->state,
+					"city" => $patient->city,
+					"street" => $patient->street,
+					"number" => $patient->number,
+					"floor" => $patient->floor,
+					"apartment" => $patient->apartment,
+					"socialSecurity1" => $patient->socialSecurity1,
+					"socialSecurity1Number" => $patient->socialSecurity1Number,
+					"socialSecurity2" => $patient->socialSecurity2,
+					"socialSecurity2Number" => $patient->socialSecurity2Number,
+					"birthType" => $patient->birthType,
+					"weightNewborn" => $patient->weightNewborn,
+					"bloodType" => $patient->bloodType,
+					"rhFactor" => $patient->rhFactor,
+					"apgar" => $patient->apgar,
+					"gestationalAge" => $patient->gestationalAge,
+					"comments" => $patient->comments,
+					"father" => $patient->father,
+					"mother" => $patient->mother,
+					"brothers" => $patient->brothers,
+					"others" => $patient->others,
+				],
+				"relationships" => [
+					"visits" => $visits,
+				],
+			];
+
 		}
 
 		$result = [
@@ -256,9 +309,9 @@ class Patient {
 
 			$attributes = $body['data']['attributes'];
 
-			$Patient = $this->table->find($id);
+			$patient = $this->table->find($id);
 
-			if ($Patient && $attributes) {
+			if ($patient && $attributes) {
 				$success = $this->table->where('id', $id)->update($attributes);
 			} else {
 				$errors = [
@@ -272,13 +325,13 @@ class Patient {
 				return $newResponse;
 			}
 
-			$Patient = $this->table->find($id);
+			$patient = $this->table->find($id);
 
 			$result = [
 				"links" => [
 					"self" => "/patients/" . $id,
 				],
-				"data" => $Patient,
+				"data" => $patient,
 			];
 
 		}
@@ -297,16 +350,16 @@ class Patient {
 
 			$id = $args['id'];
 
-			$Patient = $this->table->find($id);
+			$patient = $this->table->find($id);
 
-			if ($Patient) {
+			if ($patient) {
 				$result = $this->table->where('id', $id)->delete();
 			} else {
 				$errors = [
 					"errors" => [
 						"id" => "404",
 						"status" => "404 Not Found",
-						"title" => "ID Patient not found",
+						"title" => "ID patient not found",
 					],
 				];
 				$newResponse = $response->withJson($errors, 404);
