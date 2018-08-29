@@ -10,12 +10,12 @@ use Psr\Log\LoggerInterface;
 class Patient {
 	private $logger;
 	protected $table;
-	private $visitsTable;
+	protected $visitsTable;
 
 	public function __construct(
 		LoggerInterface $logger,
 		Builder $table,
-		$visitsTable
+		Builder $visitsTable
 	) {
 		$this->logger = $logger;
 		$this->table = $table;
@@ -28,23 +28,23 @@ class Patient {
 		$result = [];
 
 		switch ($method) {
-		case 'GET':
+			case 'GET':
 			$newResponse = $this->get($request, $response, $args);
 			break;
 
-		case 'POST':
+			case 'POST':
 			$newResponse = $this->add($request, $response, $args);
 			break;
 
-		case 'PATCH':
+			case 'PATCH':
 			$newResponse = $this->update($request, $response, $args);
 			break;
 
-		case 'DELETE':
+			case 'DELETE':
 			$newResponse = $this->delete($request, $response, $args);
 			break;
 
-		default:
+			default:
 			break;
 		}
 
@@ -52,18 +52,20 @@ class Patient {
 	}
 
 	private function get(Request $request, Response $response, $args) {
-		$result = [];
+		$result["links"] = [
+			"self" => "/patients"
+		];
+		
 		$data = [];
 
 		if (array_key_exists("id", $args)) {
-
-			$result = $this->getOne($args['id']);
-
+			return $this->getOne($args['id'], $response);
 		} else {
 			$this->logger->info("Get patients");
-
 			$query = $this->table;
 
+			/** Sorting **/
+			/** Example: /patients?sort=[-]attr1[,[-]attr2,..] **/
 			$sort = $request->getParam('sort');
 			if ($sort) {
 				$columns = explode(',', $sort);
@@ -87,12 +89,14 @@ class Patient {
 				}
 			}
 
+			/** Filtering **/
+			/** Example: /patients?filter=[-]attr1:string[,[-]attr2:string,..] **/
 			$filter = $request->getParam('filter');
 			if ($filter) {
-				$columns = explode(',', $filter);
-				foreach ($columns as $column) {
-					$column = explode(':', $column);
-					if (count($column) != 2) {
+				$terms = explode(',', $filter);
+				foreach ($terms as $term) {
+					$parameters = explode(':', $term);
+					if (count($term) != 2) {
 						$errors = [
 							"errors" => [
 								"id" => "400",
@@ -103,18 +107,24 @@ class Patient {
 						$newResponse = $response->withJson($errors, 400);
 						return $newResponse;
 					}
-					$query = $query->orWhere($column[0], 'like', '%' . $column[1] . '%');
+					if(substr($parameters[0], 0, 1) === '-') {
+						$query = $query->where(ltrim($parameters[0],'-'), 'like', '%' . $parameters[1] . '%');
+					} else {						
+						$query = $query->orWhere($parameters[0], 'like', '%' . $parameters[1] . '%');
+					}
 				}
 			}
 
+			/** Pagination **/
+			/** ToDo **/
 			$page = $request->getParam('page');
 			if ($page) {
 				switch ($page) {
-				case 'first':
+					case 'first':
 					$query = $query->take(10);
 					break;
 
-				default:
+					default:
 					$limits = explode(',', $page);
 					if (count($limits) != 2) {
 						$errors = [
@@ -133,62 +143,70 @@ class Patient {
 			}
 
 			$patients = $query->get();
-			$relationships = [];
 
-			if (!count($patients)) {
-				$patients = [];
-			} else {
-				foreach ($patients as $patient) {
-					$data[] = [
-						"type" => "patient",
-						"id" => $patient->id,
-						"attributes" => [
-							"lastname" => $patient->lastname,
-							"name" => $patient->name,
-							"birthday" => $patient->birthday,
-							"gender" => $patient->gender,
-							"docType" => $patient->docType,
-							"doc" => $patient->doc,
-							"phone1" => $patient->phone1,
-							"phone2" => $patient->phone2,
-							"country" => $patient->country,
-							"state" => $patient->state,
-							"city" => $patient->city,
-							"street" => $patient->street,
-							"number" => $patient->number,
-							"floor" => $patient->floor,
-							"apartment" => $patient->apartment,
-							"socialSecurity1" => $patient->socialSecurity1,
-							"socialSecurity1Number" => $patient->socialSecurity1Number,
-							"socialSecurity2" => $patient->socialSecurity2,
-							"socialSecurity2Number" => $patient->socialSecurity2Number,
-							"birthType" => $patient->birthType,
-							"weightNewborn" => $patient->weightNewborn,
-							"bloodType" => $patient->bloodType,
-							"rhFactor" => $patient->rhFactor,
-							"apgar" => $patient->apgar,
-							"gestationalAge" => $patient->gestationalAge,
-							"comments" => $patient->comments,
-							"father" => $patient->father,
-							"mother" => $patient->mother,
-							"brothers" => $patient->brothers,
-							"others" => $patient->others,
+			foreach ($patients as $patient) {
+				$data[] = [
+					"type" => "patient",
+					"id" => $patient->id,
+					"attributes" => [
+						"lastname" => $patient->lastname,
+						"name" => $patient->name,
+						"birthday" => $patient->birthday,
+						"gender" => $patient->gender,
+						"docType" => $patient->docType,
+						"doc" => $patient->doc,
+						"phone1" => $patient->phone1,
+						"phone2" => $patient->phone2,
+						"country" => $patient->country,
+						"state" => $patient->state,
+						"city" => $patient->city,
+						"street" => $patient->street,
+						"number" => $patient->number,
+						"floor" => $patient->floor,
+						"apartment" => $patient->apartment,
+						"socialSecurity1" => $patient->socialSecurity1,
+						"socialSecurity1Number" => $patient->socialSecurity1Number,
+						"socialSecurity2" => $patient->socialSecurity2,
+						"socialSecurity2Number" => $patient->socialSecurity2Number,
+						"birthType" => $patient->birthType,
+						"rhFactor" => $patient->rhFactor,
+						"apgar" => $patient->apgar,
+						"gestationalAge" => $patient->gestationalAge,
+						"comments" => $patient->comments,
+						"father" => $patient->father,
+						"mother" => $patient->mother,
+						"brothers" => $patient->brothers,
+						"others" => $patient->others,
+					],
+				];
+
+				$visitsQuery = $this->visitsTable;
+				$visitsQuery = $visitsQuery->where('patient', $patient->id);
+				$visits = $visitsQuery->get();
+
+				foreach ($visits as $visit) {
+					$data["relationships"]["visits"][] = [
+						"links" => [
+							"self" => "/visits/" . $visit->id
 						],
-						"relationships" => [],
+						"data" => [
+							"type" => "visit",
+							"id" => $visit->id,
+							"attributes" => [
+								"patient" => $visit->patient,
+								"date" => $visit->date,
+								"weight" => $visit->weight,
+								"height" => $visit->height,
+								"perimeter" => $visit->perimeter,
+								"diagnosis" => $visit->diagnosis,
+								"treatment" => $visit->treatment,
+							]
+						]
 					];
 				}
 			}
 
-			$result = [
-				"links" => [
-					"self" => "/patients",
-					"first" => "/patients?page=first",
-					"last" => "/patients?page=last",
-					"prev" => "/patients?page=prev",
-					"next" => "/patients?page=next",
-				],
-				"data" => $data,
-			];
+			$result["data"] = $data;
 		}
 
 		$newResponse = $response->withJson($result);
@@ -196,22 +214,21 @@ class Patient {
 		return $newResponse;
 	}
 
-	private function getOne($id) {
-		$this->logger->info("Get a Patient");
-
-		$result = [];
+	public function getOne($id, $response) {
+		$result["links"] = [
+			"self" => "/patients/" . $id
+		];
+		
 		$data = [];
+
+		$this->logger->info("Get a patient");
 
 		$patient = $this->table->find($id);
 
-		if ($patient) {
-			$visitsQuery = $this->visitsTable;
-			$visitsQuery = $visitsQuery->where('patient', $patient->id);
-			$visits = $visitsQuery->get();
-
-			$data = [
+		if($patient) {
+			$data[] = [
 				"type" => "patient",
-				"id" => $id,
+				"id" => $patient->id,
 				"attributes" => [
 					"lastname" => $patient->lastname,
 					"name" => $patient->name,
@@ -233,8 +250,6 @@ class Patient {
 					"socialSecurity2" => $patient->socialSecurity2,
 					"socialSecurity2Number" => $patient->socialSecurity2Number,
 					"birthType" => $patient->birthType,
-					"weightNewborn" => $patient->weightNewborn,
-					"bloodType" => $patient->bloodType,
 					"rhFactor" => $patient->rhFactor,
 					"apgar" => $patient->apgar,
 					"gestationalAge" => $patient->gestationalAge,
@@ -244,31 +259,59 @@ class Patient {
 					"brothers" => $patient->brothers,
 					"others" => $patient->others,
 				],
-				"relationships" => [
-					"visits" => $visits,
-				],
 			];
 
+			$visitsQuery = $this->visitsTable;
+			$visitsQuery = $visitsQuery->where('patient', $patient->id);
+			$visits = $visitsQuery->get();
+
+			foreach ($visits as $visit) {
+				$data["relationships"]["visits"][] = [
+					"links" => [
+						"self" => "/visits/" . $visit->id
+					],
+					"data" => [
+						"type" => "visit",
+						"id" => $visit->id,
+						"attributes" => [
+							"patient" => $visit->patient,
+							"date" => $visit->date,
+							"weight" => $visit->weight,
+							"height" => $visit->height,
+							"perimeter" => $visit->perimeter,
+							"diagnosis" => $visit->diagnosis,
+							"treatment" => $visit->treatment,
+						]
+					]
+				];
+			}
+		} else {
+			$errors = [
+				"errors" => [
+					"id" => "404",
+					"status" => "404 Not Found",
+					"title" => "ID Patient not found",
+				],
+			];
+			$newResponse = $response->withJson($errors, 404);
+			return $newResponse;
 		}
 
-		$result = [
-			"links" => [
-				"self" => "/patients/" . $id,
-			],
-			"data" => $data,
-		];
+		$result["data"] = $data;
 
-		return $result;
+		$newResponse = $response->withJson($result);
+
+		return $newResponse;
 	}
 
 	private function add(Request $request, Response $response, $args) {
-		$this->logger->info("Add a Patient");
+		$this->logger->info("Add a patient");
 
 		$body = $request->getParsedBody();
 
 		$attributes = $body['data']['attributes'];
 
-		$patientId = $this->table->insertGetId($attributes);
+		$statusId = $this->table->insertGetId($attributes);
 
 		if (!$patientId) {
 			$errors = [
@@ -297,7 +340,7 @@ class Patient {
 	}
 
 	private function update(Request $request, Response $response, $args) {
-		$this->logger->info("Update a Patient");
+		$this->logger->info("Update a patient");
 
 		$result = null;
 
@@ -342,7 +385,7 @@ class Patient {
 	}
 
 	private function delete(Request $request, Response $response, $args) {
-		$this->logger->info("Delete a Patient");
+		$this->logger->info("Delete a patient");
 
 		$result = null;
 
@@ -359,7 +402,7 @@ class Patient {
 					"errors" => [
 						"id" => "404",
 						"status" => "404 Not Found",
-						"title" => "ID patient not found",
+						"title" => "ID Patient not found",
 					],
 				];
 				$newResponse = $response->withJson($errors, 404);

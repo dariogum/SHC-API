@@ -25,23 +25,23 @@ class Visit {
 		$result = [];
 
 		switch ($method) {
-		case 'GET':
+			case 'GET':
 			$newResponse = $this->get($request, $response, $args);
 			break;
 
-		case 'POST':
+			case 'POST':
 			$newResponse = $this->add($request, $response, $args);
 			break;
 
-		case 'PATCH':
+			case 'PATCH':
 			$newResponse = $this->update($request, $response, $args);
 			break;
 
-		case 'DELETE':
+			case 'DELETE':
 			$newResponse = $this->delete($request, $response, $args);
 			break;
 
-		default:
+			default:
 			break;
 		}
 
@@ -49,18 +49,20 @@ class Visit {
 	}
 
 	private function get(Request $request, Response $response, $args) {
-		$result = [];
+		$result["links"] = [
+			"self" => "/visits"
+		];
+		
 		$data = [];
 
 		if (array_key_exists("id", $args)) {
-
-			$result = $this->getOne($args['id']);
-
+			return $this->getOne($args['id'], $response);
 		} else {
 			$this->logger->info("Get visits");
-
 			$query = $this->table;
 
+			/** Sorting **/
+			/** Example: /visits?sort=[-]attr1[,[-]attr2,..] **/
 			$sort = $request->getParam('sort');
 			if ($sort) {
 				$columns = explode(',', $sort);
@@ -84,12 +86,14 @@ class Visit {
 				}
 			}
 
+			/** Filtering **/
+			/** Example: /visits?filter=[-]attr1:string[,[-]attr2:string,..] **/
 			$filter = $request->getParam('filter');
 			if ($filter) {
-				$columns = explode(',', $filter);
-				foreach ($columns as $column) {
-					$column = explode(':', $column);
-					if (count($column) != 2) {
+				$terms = explode(',', $filter);
+				foreach ($terms as $term) {
+					$parameters = explode(':', $term);
+					if (count($term) != 2) {
 						$errors = [
 							"errors" => [
 								"id" => "400",
@@ -100,18 +104,24 @@ class Visit {
 						$newResponse = $response->withJson($errors, 400);
 						return $newResponse;
 					}
-					$query = $query->where($column[0], 'like', '%' . $column[1] . '%');
+					if(substr($parameters[0], 0, 1) === '-') {
+						$query = $query->where(ltrim($parameters[0],'-'), 'like', '%' . $parameters[1] . '%');
+					} else {						
+						$query = $query->orWhere($parameters[0], 'like', '%' . $parameters[1] . '%');
+					}
 				}
 			}
 
+			/** Pagination **/
+			/** ToDo **/
 			$page = $request->getParam('page');
 			if ($page) {
 				switch ($page) {
-				case 'first':
+					case 'first':
 					$query = $query->take(10);
 					break;
 
-				default:
+					default:
 					$limits = explode(',', $page);
 					if (count($limits) != 2) {
 						$errors = [
@@ -147,16 +157,7 @@ class Visit {
 				];
 			}
 
-			$result = [
-				"links" => [
-					"self" => "/visits",
-					"first" => "/visits?page=first",
-					"last" => "/visits?page=last",
-					"prev" => "/visits?page=prev",
-					"next" => "/visits?page=next",
-				],
-				"data" => $data,
-			];
+			$result["data"] = $data;
 		}
 
 		$newResponse = $response->withJson($result);
@@ -164,33 +165,48 @@ class Visit {
 		return $newResponse;
 	}
 
-	public function getOne($id) {
+	public function getOne($id, $response) {
+		$result["links"] = [
+			"self" => "/visits/" . $id
+		];
+		
+		$data = [];
+
 		$this->logger->info("Get a visit");
 
 		$visit = $this->table->find($id);
 
-		$data = [
-			"type" => "visit",
-			"id" => $id,
-			"attributes" => [
-				"patient" => $visit->patient,
-				"date" => $visit->date,
-				"weight" => $visit->weight,
-				"height" => $visit->height,
-				"perimeter" => $visit->perimeter,
-				"diagnosis" => $visit->diagnosis,
-				"treatment" => $visit->treatment,
-			],
-		];
+		if($visit) {
+			$data = [
+				"type" => "visit",
+				"id" => $visit->id,
+				"attributes" => [
+					"patient" => $visit->patient,
+					"date" => $visit->date,
+					"weight" => $visit->weight,
+					"height" => $visit->height,
+					"perimeter" => $visit->perimeter,
+					"diagnosis" => $visit->diagnosis,
+					"treatment" => $visit->treatment,
+				],
+			];
+		} else {
+			$errors = [
+				"errors" => [
+					"id" => "404",
+					"status" => "404 Not Found",
+					"title" => "ID Visit not found",
+				],
+			];
+			$newResponse = $response->withJson($errors, 404);
+			return $newResponse;
+		}
 
-		$result = [
-			"links" => [
-				"self" => "/visits/" . $id,
-			],
-			"data" => $data,
-		];
+		$result["data"] = $data;
 
-		return $result;
+		$newResponse = $response->withJson($result);
+
+		return $newResponse;
 	}
 
 	private function add(Request $request, Response $response, $args) {
