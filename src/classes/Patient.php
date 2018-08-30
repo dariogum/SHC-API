@@ -28,23 +28,23 @@ class Patient {
 		$result = [];
 
 		switch ($method) {
-			case 'GET':
+		case 'GET':
 			$newResponse = $this->get($request, $response, $args);
 			break;
 
-			case 'POST':
+		case 'POST':
 			$newResponse = $this->add($request, $response, $args);
 			break;
 
-			case 'PATCH':
+		case 'PATCH':
 			$newResponse = $this->update($request, $response, $args);
 			break;
 
-			case 'DELETE':
+		case 'DELETE':
 			$newResponse = $this->delete($request, $response, $args);
 			break;
 
-			default:
+		default:
 			break;
 		}
 
@@ -53,9 +53,9 @@ class Patient {
 
 	private function get(Request $request, Response $response, $args) {
 		$result["links"] = [
-			"self" => "/patients"
+			"self" => "/patients",
 		];
-		
+
 		$data = [];
 
 		if (array_key_exists("id", $args)) {
@@ -96,7 +96,7 @@ class Patient {
 				$terms = explode(',', $filter);
 				foreach ($terms as $term) {
 					$parameters = explode(':', $term);
-					if (count($term) != 2) {
+					if (sizeof($parameters) != 2) {
 						$errors = [
 							"errors" => [
 								"id" => "400",
@@ -107,9 +107,9 @@ class Patient {
 						$newResponse = $response->withJson($errors, 400);
 						return $newResponse;
 					}
-					if(substr($parameters[0], 0, 1) === '-') {
-						$query = $query->where(ltrim($parameters[0],'-'), 'like', '%' . $parameters[1] . '%');
-					} else {						
+					if (substr($parameters[0], 0, 1) === '-') {
+						$query = $query->where(ltrim($parameters[0], '-'), 'like', '%' . $parameters[1] . '%');
+					} else {
 						$query = $query->orWhere($parameters[0], 'like', '%' . $parameters[1] . '%');
 					}
 				}
@@ -120,11 +120,11 @@ class Patient {
 			$page = $request->getParam('page');
 			if ($page) {
 				switch ($page) {
-					case 'first':
+				case 'first':
 					$query = $query->take(10);
 					break;
 
-					default:
+				default:
 					$limits = explode(',', $page);
 					if (count($limits) != 2) {
 						$errors = [
@@ -184,10 +184,12 @@ class Patient {
 				$visitsQuery = $visitsQuery->where('patient', $patient->id);
 				$visits = $visitsQuery->get();
 
+				$data[sizeof($data) - 1]["relationships"]["visits"] = [];
+
 				foreach ($visits as $visit) {
-					$data["relationships"]["visits"][] = [
+					$data[sizeof($data) - 1]["relationships"]["visits"][] = [
 						"links" => [
-							"self" => "/visits/" . $visit->id
+							"self" => "/visits/" . $visit->id,
 						],
 						"data" => [
 							"type" => "visit",
@@ -200,8 +202,8 @@ class Patient {
 								"perimeter" => $visit->perimeter,
 								"diagnosis" => $visit->diagnosis,
 								"treatment" => $visit->treatment,
-							]
-						]
+							],
+						],
 					];
 				}
 			}
@@ -216,17 +218,17 @@ class Patient {
 
 	public function getOne($id, $response) {
 		$result["links"] = [
-			"self" => "/patients/" . $id
+			"self" => "/patients/" . $id,
 		];
-		
+
 		$data = [];
 
 		$this->logger->info("Get a patient");
 
 		$patient = $this->table->find($id);
 
-		if($patient) {
-			$data[] = [
+		if ($patient) {
+			$data = [
 				"type" => "patient",
 				"id" => $patient->id,
 				"attributes" => [
@@ -268,7 +270,7 @@ class Patient {
 			foreach ($visits as $visit) {
 				$data["relationships"]["visits"][] = [
 					"links" => [
-						"self" => "/visits/" . $visit->id
+						"self" => "/visits/" . $visit->id,
 					],
 					"data" => [
 						"type" => "visit",
@@ -281,8 +283,8 @@ class Patient {
 							"perimeter" => $visit->perimeter,
 							"diagnosis" => $visit->diagnosis,
 							"treatment" => $visit->treatment,
-						]
-					]
+						],
+					],
 				];
 			}
 		} else {

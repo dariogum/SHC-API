@@ -25,23 +25,23 @@ class Visit {
 		$result = [];
 
 		switch ($method) {
-			case 'GET':
+		case 'GET':
 			$newResponse = $this->get($request, $response, $args);
 			break;
 
-			case 'POST':
+		case 'POST':
 			$newResponse = $this->add($request, $response, $args);
 			break;
 
-			case 'PATCH':
+		case 'PATCH':
 			$newResponse = $this->update($request, $response, $args);
 			break;
 
-			case 'DELETE':
+		case 'DELETE':
 			$newResponse = $this->delete($request, $response, $args);
 			break;
 
-			default:
+		default:
 			break;
 		}
 
@@ -50,9 +50,9 @@ class Visit {
 
 	private function get(Request $request, Response $response, $args) {
 		$result["links"] = [
-			"self" => "/visits"
+			"self" => "/visits",
 		];
-		
+
 		$data = [];
 
 		if (array_key_exists("id", $args)) {
@@ -93,7 +93,7 @@ class Visit {
 				$terms = explode(',', $filter);
 				foreach ($terms as $term) {
 					$parameters = explode(':', $term);
-					if (count($term) != 2) {
+					if (sizeof($parameters) != 2) {
 						$errors = [
 							"errors" => [
 								"id" => "400",
@@ -104,9 +104,9 @@ class Visit {
 						$newResponse = $response->withJson($errors, 400);
 						return $newResponse;
 					}
-					if(substr($parameters[0], 0, 1) === '-') {
-						$query = $query->where(ltrim($parameters[0],'-'), 'like', '%' . $parameters[1] . '%');
-					} else {						
+					if (substr($parameters[0], 0, 1) === '-') {
+						$query = $query->where(ltrim($parameters[0], '-'), 'like', '%' . $parameters[1] . '%');
+					} else {
 						$query = $query->orWhere($parameters[0], 'like', '%' . $parameters[1] . '%');
 					}
 				}
@@ -117,11 +117,11 @@ class Visit {
 			$page = $request->getParam('page');
 			if ($page) {
 				switch ($page) {
-					case 'first':
+				case 'first':
 					$query = $query->take(10);
 					break;
 
-					default:
+				default:
 					$limits = explode(',', $page);
 					if (count($limits) != 2) {
 						$errors = [
@@ -167,16 +167,16 @@ class Visit {
 
 	public function getOne($id, $response) {
 		$result["links"] = [
-			"self" => "/visits/" . $id
+			"self" => "/visits/" . $id,
 		];
-		
+
 		$data = [];
 
 		$this->logger->info("Get a visit");
 
 		$visit = $this->table->find($id);
 
-		if($visit) {
+		if ($visit) {
 			$data = [
 				"type" => "visit",
 				"id" => $visit->id,
