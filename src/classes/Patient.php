@@ -313,7 +313,7 @@ class Patient {
 
 		$attributes = $body['data']['attributes'];
 
-		$statusId = $this->table->insertGetId($attributes);
+		$patientId = $this->table->insertGetId($attributes);
 
 		if (!$patientId) {
 			$errors = [
@@ -333,7 +333,7 @@ class Patient {
 			"links" => [
 				"self" => "/patients/" . $patientId,
 			],
-			"data" => $body,
+			"data" => $body["data"],
 		];
 
 		$newResponse = $response->withJson($result, 201);
