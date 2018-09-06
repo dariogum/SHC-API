@@ -252,6 +252,7 @@ class Patient {
 					"socialSecurity2" => $patient->socialSecurity2,
 					"socialSecurity2Number" => $patient->socialSecurity2Number,
 					"birthType" => $patient->birthType,
+					"bloodType" => $patient->bloodType,
 					"rhFactor" => $patient->rhFactor,
 					"apgar" => $patient->apgar,
 					"gestationalAge" => $patient->gestationalAge,
