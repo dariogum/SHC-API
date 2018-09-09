@@ -216,7 +216,7 @@ class Visit {
 
 		$attributes = $body['data']['attributes'];
 
-		$statusId = $this->table->insertGetId($attributes);
+		$visitId = $this->table->insertGetId($attributes);
 
 		if (!$visitId) {
 			$errors = [
@@ -236,7 +236,7 @@ class Visit {
 			"links" => [
 				"self" => "/visits/" . $visitId,
 			],
-			"data" => $body,
+			"data" => $body["data"],
 		];
 
 		$newResponse = $response->withJson($result, 201);

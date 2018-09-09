@@ -169,6 +169,8 @@ class Patient {
 						"socialSecurity2" => $patient->socialSecurity2,
 						"socialSecurity2Number" => $patient->socialSecurity2Number,
 						"birthType" => $patient->birthType,
+						"weightNewborn" => $patient->weightNewborn,
+						"bloodType" => $patient->bloodType,
 						"rhFactor" => $patient->rhFactor,
 						"apgar" => $patient->apgar,
 						"gestationalAge" => $patient->gestationalAge,
@@ -252,6 +254,7 @@ class Patient {
 					"socialSecurity2" => $patient->socialSecurity2,
 					"socialSecurity2Number" => $patient->socialSecurity2Number,
 					"birthType" => $patient->birthType,
+					"weightNewborn" => $patient->weightNewborn,
 					"bloodType" => $patient->bloodType,
 					"rhFactor" => $patient->rhFactor,
 					"apgar" => $patient->apgar,
@@ -399,6 +402,9 @@ class Patient {
 			$patient = $this->table->find($id);
 
 			if ($patient) {
+				$visitsQuery = $this->visitsTable;
+				$visitsQuery = $visitsQuery->where('patient', $patient->id)->delete();
+
 				$result = $this->table->where('id', $id)->delete();
 			} else {
 				$errors = [
