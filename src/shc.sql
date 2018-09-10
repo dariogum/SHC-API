@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1:3306
--- Tiempo de generación: 28-08-2018 a las 15:06:29
+-- Tiempo de generación: 10-09-2018 a las 11:45:16
 -- Versión del servidor: 5.7.21
 -- Versión de PHP: 5.6.35
 
@@ -65,14 +65,14 @@ CREATE TABLE IF NOT EXISTS `patients` (
   KEY `lastname` (`lastname`),
   KEY `name` (`name`),
   KEY `doc` (`doc`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 --
 -- Volcado de datos para la tabla `patients`
 --
 
 INSERT INTO `patients` (`id`, `lastname`, `name`, `birthday`, `gender`, `docType`, `doc`, `phone1`, `phone2`, `country`, `state`, `city`, `street`, `number`, `floor`, `apartment`, `socialSecurity1`, `socialSecurity1Number`, `socialSecurity2`, `socialSecurity2Number`, `birthType`, `weightNewborn`, `bloodType`, `rhFactor`, `apgar`, `gestationalAge`, `comments`, `father`, `mother`, `brothers`, `others`) VALUES
-(1, 'Uberti Manassero', 'Darío Germán', '1987-10-06', 1, 1, '33038935', '3424669752', NULL, 1, 1, 1, 'Av. Gbdor. Freyre', 3169, '2', 'A', NULL, NULL, NULL, NULL, NULL, '2800', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(1, 'Uberti Manassero', 'Darío Germán', '1987-10-06', 1, 1, '33038935', '3424669752', NULL, 1, 20, 1, 'Av. Gbdor. Freyre', 3169, '2', 'A', 1, '123456789', NULL, NULL, 1, '1234', 2, 1, 10, 39, 'asdf', 'asdasdas', 'asd', 'qasdasdas', 'adasdasda'),
 (2, 'Pedicino', 'Verónica Ticiana', '1988-09-19', 2, NULL, NULL, NULL, NULL, 1, 1, 1, 'Coronel Dorrego', 5531, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '3000', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
@@ -94,14 +94,19 @@ CREATE TABLE IF NOT EXISTS `visits` (
   PRIMARY KEY (`id`),
   KEY `patient` (`patient`),
   KEY `date` (`date`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 --
 -- Volcado de datos para la tabla `visits`
 --
 
 INSERT INTO `visits` (`id`, `patient`, `date`, `weight`, `height`, `perimeter`, `diagnosis`, `treatment`) VALUES
-(1, 1, '2018-08-28', NULL, NULL, NULL, 'Probando', NULL);
+(1, 1, '1988-08-28', NULL, NULL, NULL, 'Probando', NULL),
+(2, 1, '1987-11-16', NULL, NULL, NULL, 'Probando', NULL),
+(3, 1, '1989-11-16', NULL, NULL, NULL, 'Probando', NULL),
+(4, 1, '2018-09-07', '1234', '123', '12', 'asd', 'asd'),
+(5, 1, '2018-09-07', NULL, NULL, NULL, 'asd', NULL),
+(9, 1, '2018-09-04', NULL, NULL, NULL, 'ghj', NULL);
 
 --
 -- Restricciones para tablas volcadas
