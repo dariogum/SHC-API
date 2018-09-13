@@ -10,13 +10,16 @@ use Psr\Log\LoggerInterface;
 class Visit {
 	private $logger;
 	protected $table;
+	protected $filesTable;
 
 	public function __construct(
 		LoggerInterface $logger,
-		Builder $table
+		Builder $table,
+		Builder $filesTable
 	) {
 		$this->logger = $logger;
 		$this->table = $table;
+		$this->filesTable = $filesTable;
 	}
 
 	public function __invoke(Request $request, Response $response, $args) {
@@ -30,7 +33,11 @@ class Visit {
 			break;
 
 		case 'POST':
-			$newResponse = $this->add($request, $response, $args);
+			if (array_key_exists("id", $args)) {
+				$newResponse = $this->addFiles($request, $response, $args);
+			} else {
+				$newResponse = $this->add($request, $response, $args);
+			}
 			break;
 
 		case 'PATCH':
@@ -155,6 +162,27 @@ class Visit {
 						"treatment" => $visit->treatment,
 					],
 				];
+
+				$filesQuery = $this->filesTable;
+				$filesQuery = $filesQuery->where('visit', $visit->id);
+				$files = $filesQuery->get();
+
+				$data[sizeof($data) - 1]["relationships"]["files"] = [];
+
+				foreach ($files as $file) {
+					$data[sizeof($data) - 1]["relationships"]["files"][] = [
+						"links" => [
+							"self" => "/files/" . $file->id,
+						],
+						"data" => [
+							"type" => "file",
+							"id" => $file->id,
+							"attributes" => [
+								"name" => $file->name,
+							],
+						],
+					];
+				}
 			}
 
 			$result["data"] = $data;
@@ -190,6 +218,25 @@ class Visit {
 					"treatment" => $visit->treatment,
 				],
 			];
+
+			$filesQuery = $this->filesTable;
+			$filesQuery = $filesQuery->where('visit', $visit->id);
+			$files = $filesQuery->get();
+
+			foreach ($files as $file) {
+				$data["relationships"]["files"][] = [
+					"links" => [
+						"self" => "/files/" . $file->id,
+					],
+					"data" => [
+						"type" => "file",
+						"id" => $file->id,
+						"attributes" => [
+							"name" => $file->name,
+						],
+					],
+				];
+			}
 		} else {
 			$errors = [
 				"errors" => [
@@ -319,5 +366,65 @@ class Visit {
 		$newResponse = $response->withJson($result);
 
 		return $newResponse;
+	}
+
+	private function addFiles(Request $request, Response $response, $args) {
+		$this->logger->info("Add files to a visit");
+
+		$result = [];
+		$directory = __DIR__ . '/../../uploads';
+		$getUploadedFiles = $request->getUploadedFiles();
+		$visitId = null;
+
+		if (array_key_exists("id", $args)) {
+			$visitId = $args["id"];
+			$visit = $this->table->find($visitId);
+			if (!$visit) {
+				$errors = [
+					"errors" => [
+						"id" => "404",
+						"status" => "404 Not Found",
+						"title" => "ID Visit not found",
+					],
+				];
+				$newResponse = $response->withJson($errors, 404);
+				return $newResponse;
+			}
+		}
+
+		foreach ($getUploadedFiles['visitFiles'] as $uploadedFile) {
+			if ($uploadedFile->getError() === UPLOAD_ERR_OK) {
+				$filename = $this->moveUploadedFile($directory, $uploadedFile);
+				$fileId = $this->filesTable->insertGetId([
+					"visit" => $visitId,
+					"name" => $filename,
+				]);
+				$result[] = ["id" => $fileId, "filename" => $filename, "uploaded" => true];
+			} else {
+				$result[] = ["id" => null, "filename" => $uploadedFile->name, "uploaded" => false];
+			}
+		}
+
+		$newResponse = $response->withJson($result);
+
+		return $newResponse;
+	}
+
+	/**
+	 * Moves the uploaded file to the upload directory and assigns it a unique name
+	 * to avoid overwriting an existing uploaded file.
+	 *
+	 * @param string $directory directory to which the file is moved
+	 * @param UploadedFile $uploaded file uploaded file to move
+	 * @return string filename of moved file
+	 */
+	private function moveUploadedFile($directory, \Slim\Http\UploadedFile $uploadedFile) {
+		$extension = pathinfo($uploadedFile->getClientFilename(), PATHINFO_EXTENSION);
+		$basename = bin2hex(random_bytes(8)); // see http://php.net/manual/en/function.random-bytes.php
+		$filename = sprintf('%s.%0.8s', $basename, $extension);
+
+		$uploadedFile->moveTo($directory . DIRECTORY_SEPARATOR . $filename);
+
+		return $filename;
 	}
 }

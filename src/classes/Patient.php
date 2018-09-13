@@ -11,15 +11,18 @@ class Patient {
 	private $logger;
 	protected $table;
 	protected $visitsTable;
+	protected $filesTable;
 
 	public function __construct(
 		LoggerInterface $logger,
 		Builder $table,
-		Builder $visitsTable
+		Builder $visitsTable,
+		Builder $filesTable
 	) {
 		$this->logger = $logger;
 		$this->table = $table;
 		$this->visitsTable = $visitsTable;
+		$this->filesTable = $filesTable;
 	}
 
 	public function __invoke(Request $request, Response $response, $args) {
@@ -189,7 +192,8 @@ class Patient {
 				$data[sizeof($data) - 1]["relationships"]["visits"] = [];
 
 				foreach ($visits as $visit) {
-					$data[sizeof($data) - 1]["relationships"]["visits"][] = [
+
+					$visitData = [
 						"links" => [
 							"self" => "/visits/" . $visit->id,
 						],
@@ -207,6 +211,30 @@ class Patient {
 							],
 						],
 					];
+
+					/*
+						$filesQuery = $this->filesTable;
+						$filesQuery = $filesQuery->where('visit', $visit->id);
+						$files = $filesQuery->get();
+
+						foreach ($files as $file) {
+							$visitData["data"]["relationships"]["files"][] = [
+								"links" => [
+									"self" => "/files/" . $file->id,
+								],
+								"data" => [
+									"type" => "file",
+									"id" => $file->id,
+									"attributes" => [
+										"name" => $file->name,
+									],
+								],
+							];
+						}
+					*/
+
+					$data[sizeof($data) - 1]["relationships"]["visits"][] = $visitData;
+
 				}
 			}
 
@@ -272,7 +300,8 @@ class Patient {
 			$visits = $visitsQuery->get();
 
 			foreach ($visits as $visit) {
-				$data["relationships"]["visits"][] = [
+
+				$visitData = [
 					"links" => [
 						"self" => "/visits/" . $visit->id,
 					],
@@ -290,6 +319,27 @@ class Patient {
 						],
 					],
 				];
+
+				$filesQuery = $this->filesTable;
+				$filesQuery = $filesQuery->where('visit', $visit->id);
+				$files = $filesQuery->get();
+
+				foreach ($files as $file) {
+					$visitData["data"]["relationships"]["files"][] = [
+						"links" => [
+							"self" => "/files/" . $file->id,
+						],
+						"data" => [
+							"type" => "file",
+							"id" => $file->id,
+							"attributes" => [
+								"name" => $file->name,
+							],
+						],
+					];
+				}
+
+				$data["relationships"]["visits"][] = $visitData;
 			}
 		} else {
 			$errors = [

@@ -33,11 +33,13 @@ $container[\App\Classes\Patient::class] = function ($c) {
 	$logger = $c->get('logger');
 	$table = $c->get('db')->table('patients');
 	$visitsTable = $c->get('db')->table('visits');
-	return new \App\Classes\Patient($logger, $table, $visitsTable);
+	$filesTable = $c->get('db')->table('visits_files');
+	return new \App\Classes\Patient($logger, $table, $visitsTable, $filesTable);
 };
 
 $container[\App\Classes\Visit::class] = function ($c) {
 	$logger = $c->get('logger');
 	$table = $c->get('db')->table('visits');
-	return new \App\Classes\Visit($logger, $table);
+	$filesTable = $c->get('db')->table('visits_files');
+	return new \App\Classes\Visit($logger, $table, $filesTable);
 };
