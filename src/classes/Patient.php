@@ -54,12 +54,102 @@ class Patient {
 		return $newResponse;
 	}
 
+	private function patientToJson($patient, $withVisits = true, $withVisitsFiles = true) {
+		$jsonPatient = [
+			"type" => "patient",
+			"id" => $patient->id,
+			"attributes" => [
+				"lastname" => $patient->lastname,
+				"name" => $patient->name,
+				"birthday" => $patient->birthday,
+				"gender" => $patient->gender,
+				"docType" => $patient->docType,
+				"doc" => $patient->doc,
+				"phone1" => $patient->phone1,
+				"phone2" => $patient->phone2,
+				"country" => $patient->country,
+				"state" => $patient->state,
+				"city" => $patient->city,
+				"street" => $patient->street,
+				"number" => $patient->number,
+				"floor" => $patient->floor,
+				"apartment" => $patient->apartment,
+				"socialSecurity1" => $patient->socialSecurity1,
+				"socialSecurity1Number" => $patient->socialSecurity1Number,
+				"socialSecurity2" => $patient->socialSecurity2,
+				"socialSecurity2Number" => $patient->socialSecurity2Number,
+				"birthType" => $patient->birthType,
+				"weightNewborn" => $patient->weightNewborn,
+				"bloodType" => $patient->bloodType,
+				"rhFactor" => $patient->rhFactor,
+				"apgar" => $patient->apgar,
+				"gestationalAge" => $patient->gestationalAge,
+				"comments" => $patient->comments,
+				"father" => $patient->father,
+				"mother" => $patient->mother,
+				"brothers" => $patient->brothers,
+				"others" => $patient->others,
+			],
+		];
+
+		if ($withVisits) {
+			$visits = $this->visitsTable->where('patient', $patient->id)->get();
+			$jsonPatient["relationships"]["visits"] = [];
+			$visitData = [];
+
+			foreach ($visits as $visit) {
+				$visitData = [
+					"links" => [
+						"self" => "/visits/" . $visit->id,
+					],
+					"data" => [
+						"type" => "visit",
+						"id" => $visit->id,
+						"attributes" => [
+							"patient" => $visit->patient,
+							"date" => $visit->date,
+							"weight" => $visit->weight,
+							"height" => $visit->height,
+							"perimeter" => $visit->perimeter,
+							"diagnosis" => $visit->diagnosis,
+							"treatment" => $visit->treatment,
+						],
+					],
+				];
+
+				if ($withVisitsFiles) {
+					$files = $this->filesTable->where('visit', $visit->id)->get();
+					$visitData["relationships"]["files"] = [];
+
+					foreach ($files as $file) {
+						$fileData = [
+							"links" => [
+								"self" => "/files/" . $file->name,
+							],
+							"data" => [
+								"type" => "file",
+								"id" => $file->id,
+								"attributes" => [
+									"name" => $file->name,
+								],
+							],
+						];
+
+						$visitData["relationships"]["files"][] = $fileData;
+					}
+				}
+
+				$jsonPatient["relationships"]["visits"][] = $visitData;
+			}
+		}
+
+		return $jsonPatient;
+	}
+
 	private function get(Request $request, Response $response, $args) {
 		$result["links"] = [
 			"self" => "/patients",
 		];
-
-		$data = [];
 
 		if (array_key_exists("id", $args)) {
 			return $this->getOne($args['id'], $response);
@@ -145,97 +235,12 @@ class Patient {
 				}
 			}
 
+			/** Getting the patients **/
+			$data = [];
 			$patients = $query->get();
 
 			foreach ($patients as $patient) {
-				$data[] = [
-					"type" => "patient",
-					"id" => $patient->id,
-					"attributes" => [
-						"lastname" => $patient->lastname,
-						"name" => $patient->name,
-						"birthday" => $patient->birthday,
-						"gender" => $patient->gender,
-						"docType" => $patient->docType,
-						"doc" => $patient->doc,
-						"phone1" => $patient->phone1,
-						"phone2" => $patient->phone2,
-						"country" => $patient->country,
-						"state" => $patient->state,
-						"city" => $patient->city,
-						"street" => $patient->street,
-						"number" => $patient->number,
-						"floor" => $patient->floor,
-						"apartment" => $patient->apartment,
-						"socialSecurity1" => $patient->socialSecurity1,
-						"socialSecurity1Number" => $patient->socialSecurity1Number,
-						"socialSecurity2" => $patient->socialSecurity2,
-						"socialSecurity2Number" => $patient->socialSecurity2Number,
-						"birthType" => $patient->birthType,
-						"weightNewborn" => $patient->weightNewborn,
-						"bloodType" => $patient->bloodType,
-						"rhFactor" => $patient->rhFactor,
-						"apgar" => $patient->apgar,
-						"gestationalAge" => $patient->gestationalAge,
-						"comments" => $patient->comments,
-						"father" => $patient->father,
-						"mother" => $patient->mother,
-						"brothers" => $patient->brothers,
-						"others" => $patient->others,
-					],
-				];
-
-				$visitsQuery = $this->visitsTable;
-				$visitsQuery = $visitsQuery->where('patient', $patient->id);
-				$visits = $visitsQuery->get();
-
-				$data[sizeof($data) - 1]["relationships"]["visits"] = [];
-
-				foreach ($visits as $visit) {
-
-					$visitData = [
-						"links" => [
-							"self" => "/visits/" . $visit->id,
-						],
-						"data" => [
-							"type" => "visit",
-							"id" => $visit->id,
-							"attributes" => [
-								"patient" => $visit->patient,
-								"date" => $visit->date,
-								"weight" => $visit->weight,
-								"height" => $visit->height,
-								"perimeter" => $visit->perimeter,
-								"diagnosis" => $visit->diagnosis,
-								"treatment" => $visit->treatment,
-							],
-						],
-					];
-
-					/*
-						$filesQuery = $this->filesTable;
-						$filesQuery = $filesQuery->where('visit', $visit->id);
-						$files = $filesQuery->get();
-
-						foreach ($files as $file) {
-							$visitData["data"]["relationships"]["files"][] = [
-								"links" => [
-									"self" => "/files/" . $file->id,
-								],
-								"data" => [
-									"type" => "file",
-									"id" => $file->id,
-									"attributes" => [
-										"name" => $file->name,
-									],
-								],
-							];
-						}
-					*/
-
-					$data[sizeof($data) - 1]["relationships"]["visits"][] = $visitData;
-
-				}
+				$data[] = $this->patientToJson($patient, false, false);
 			}
 
 			$result["data"] = $data;
@@ -251,96 +256,14 @@ class Patient {
 			"self" => "/patients/" . $id,
 		];
 
-		$data = [];
-
 		$this->logger->info("Get a patient");
 
+		/** Getting the patient **/
+		$data = [];
 		$patient = $this->table->find($id);
 
 		if ($patient) {
-			$data = [
-				"type" => "patient",
-				"id" => $patient->id,
-				"attributes" => [
-					"lastname" => $patient->lastname,
-					"name" => $patient->name,
-					"birthday" => $patient->birthday,
-					"gender" => $patient->gender,
-					"docType" => $patient->docType,
-					"doc" => $patient->doc,
-					"phone1" => $patient->phone1,
-					"phone2" => $patient->phone2,
-					"country" => $patient->country,
-					"state" => $patient->state,
-					"city" => $patient->city,
-					"street" => $patient->street,
-					"number" => $patient->number,
-					"floor" => $patient->floor,
-					"apartment" => $patient->apartment,
-					"socialSecurity1" => $patient->socialSecurity1,
-					"socialSecurity1Number" => $patient->socialSecurity1Number,
-					"socialSecurity2" => $patient->socialSecurity2,
-					"socialSecurity2Number" => $patient->socialSecurity2Number,
-					"birthType" => $patient->birthType,
-					"weightNewborn" => $patient->weightNewborn,
-					"bloodType" => $patient->bloodType,
-					"rhFactor" => $patient->rhFactor,
-					"apgar" => $patient->apgar,
-					"gestationalAge" => $patient->gestationalAge,
-					"comments" => $patient->comments,
-					"father" => $patient->father,
-					"mother" => $patient->mother,
-					"brothers" => $patient->brothers,
-					"others" => $patient->others,
-				],
-			];
-
-			$visitsQuery = $this->visitsTable;
-			$visitsQuery = $visitsQuery->where('patient', $patient->id);
-			$visits = $visitsQuery->get();
-
-			foreach ($visits as $visit) {
-
-				$visitData = [
-					"links" => [
-						"self" => "/visits/" . $visit->id,
-					],
-					"data" => [
-						"type" => "visit",
-						"id" => $visit->id,
-						"attributes" => [
-							"patient" => $visit->patient,
-							"date" => $visit->date,
-							"weight" => $visit->weight,
-							"height" => $visit->height,
-							"perimeter" => $visit->perimeter,
-							"diagnosis" => $visit->diagnosis,
-							"treatment" => $visit->treatment,
-						],
-					],
-				];
-
-				$filesQuery = $this->filesTable;
-				$filesQuery = $filesQuery->where('visit', $visit->id);
-				$files = $filesQuery->get();
-
-				foreach ($files as $file) {
-					$visitData["data"]["relationships"]["files"][] = [
-						"links" => [
-							"self" => "/files/" . $file->id,
-						],
-						"data" => [
-							"type" => "file",
-							"id" => $file->id,
-							"attributes" => [
-								"name" => $file->name,
-							],
-						],
-					];
-				}
-
-				$data["relationships"]["visits"][] = $visitData;
-			}
+			$data = $this->patientToJson($patient);
 		} else {
 			$errors = [
 				"errors" => [

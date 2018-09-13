@@ -55,12 +55,50 @@ class Visit {
 		return $newResponse;
 	}
 
+	private function visitToJson($visit, $withVisitFiles = true) {
+		$visitData = [
+			"type" => "visit",
+			"id" => $visit->id,
+			"attributes" => [
+				"patient" => $visit->patient,
+				"date" => $visit->date,
+				"weight" => $visit->weight,
+				"height" => $visit->height,
+				"perimeter" => $visit->perimeter,
+				"diagnosis" => $visit->diagnosis,
+				"treatment" => $visit->treatment,
+			],
+		];
+
+		if ($withVisitFiles) {
+			$files = $this->filesTable->where('visit', $visit->id)->get();
+			$visitData["relationships"]["files"] = [];
+
+			foreach ($files as $file) {
+				$fileData = [
+					"links" => [
+						"self" => "/files/" . $file->name,
+					],
+					"data" => [
+						"type" => "file",
+						"id" => $file->id,
+						"attributes" => [
+							"name" => $file->name,
+						],
+					],
+				];
+
+				$visitData["relationships"]["files"][] = $fileData;
+			}
+		}
+
+		return $visitData;
+	}
+
 	private function get(Request $request, Response $response, $args) {
 		$result["links"] = [
 			"self" => "/visits",
 		];
-
-		$data = [];
 
 		if (array_key_exists("id", $args)) {
 			return $this->getOne($args['id'], $response);
@@ -147,42 +185,10 @@ class Visit {
 			}
 
 			$visits = $query->get();
+			$data = [];
 
 			foreach ($visits as $visit) {
-				$data[] = [
-					"type" => "visit",
-					"id" => $visit->id,
-					"attributes" => [
-						"patient" => $visit->patient,
-						"date" => $visit->date,
-						"weight" => $visit->weight,
-						"height" => $visit->height,
-						"perimeter" => $visit->perimeter,
-						"diagnosis" => $visit->diagnosis,
-						"treatment" => $visit->treatment,
-					],
-				];
-
-				$filesQuery = $this->filesTable;
-				$filesQuery = $filesQuery->where('visit', $visit->id);
-				$files = $filesQuery->get();
-
-				$data[sizeof($data) - 1]["relationships"]["files"] = [];
-
-				foreach ($files as $file) {
-					$data[sizeof($data) - 1]["relationships"]["files"][] = [
-						"links" => [
-							"self" => "/files/" . $file->id,
-						],
-						"data" => [
-							"type" => "file",
-							"id" => $file->id,
-							"attributes" => [
-								"name" => $file->name,
-							],
-						],
-					];
-				}
+				$data[] = $this->visitToJson($visit);
 			}
 
 			$result["data"] = $data;
@@ -198,45 +204,13 @@ class Visit {
 			"self" => "/visits/" . $id,
 		];
 
-		$data = [];
-
 		$this->logger->info("Get a visit");
 
 		$visit = $this->table->find($id);
+		$data = [];
 
 		if ($visit) {
-			$data = [
-				"type" => "visit",
-				"id" => $visit->id,
-				"attributes" => [
-					"patient" => $visit->patient,
-					"date" => $visit->date,
-					"weight" => $visit->weight,
-					"height" => $visit->height,
-					"perimeter" => $visit->perimeter,
-					"diagnosis" => $visit->diagnosis,
-					"treatment" => $visit->treatment,
-				],
-			];
-
-			$filesQuery = $this->filesTable;
-			$filesQuery = $filesQuery->where('visit', $visit->id);
-			$files = $filesQuery->get();
-
-			foreach ($files as $file) {
-				$data["relationships"]["files"][] = [
-					"links" => [
-						"self" => "/files/" . $file->id,
-					],
-					"data" => [
-						"type" => "file",
-						"id" => $file->id,
-						"attributes" => [
-							"name" => $file->name,
-						],
-					],
-				];
-			}
+			$data = $this->visitToJson($visit);
 		} else {
 			$errors = [
 				"errors" => [
