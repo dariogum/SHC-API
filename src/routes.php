@@ -12,13 +12,6 @@ $app->add(function ($req, $res, $next) {
 		->withHeader('Access-Control-Allow-Methods', 'GET, POST, HEAD, OPTIONS, PATCH, DELETE');
 });
 
-$app->get('/v1/files/{name}', function (Request $request, Response $response, array $args) {
-	die('lalala');
-	$file = file_get_contents(__DIR__ . "../uploads/" . $args['name']);
-	$response->getBody()->write($file);
-	return $response;
-});
-
 $app->get('/[{name}]', function (Request $request, Response $response, array $args) {
 	$this->logger->info("Slim-Skeleton '/' route");
 	return $this->renderer->render($response, 'index.phtml', $args);
@@ -36,3 +29,6 @@ $app->post('/v1/visits', \App\Classes\Visit::class);
 $app->post('/v1/visits/{id:\d+}/addFiles', \App\Classes\Visit::class);
 $app->patch('/v1/visits/{id:\d+}', \App\Classes\Visit::class);
 $app->delete('/v1/visits/{id:\d+}', \App\Classes\Visit::class);
+
+$app->get('/v1/files/{id:\d+}', \App\Classes\File::class);
+$app->delete('/v1/files/{id:\d+}', \App\Classes\File::class);

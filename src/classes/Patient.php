@@ -119,12 +119,12 @@ class Patient {
 
 				if ($withVisitsFiles) {
 					$files = $this->filesTable->where('visit', $visit->id)->get();
-					$visitData["relationships"]["files"] = [];
+					$visitData["data"]["relationships"]["files"] = [];
 
 					foreach ($files as $file) {
 						$fileData = [
 							"links" => [
-								"self" => "/files/" . $file->name,
+								"self" => "/files/" . $file->id,
 							],
 							"data" => [
 								"type" => "file",
@@ -135,7 +135,7 @@ class Patient {
 							],
 						];
 
-						$visitData["relationships"]["files"][] = $fileData;
+						$visitData["data"]["relationships"]["files"][] = $fileData;
 					}
 				}
 
@@ -375,9 +375,7 @@ class Patient {
 			$patient = $this->table->find($id);
 
 			if ($patient) {
-				$visitsQuery = $this->visitsTable;
-				$visitsQuery = $visitsQuery->where('patient', $patient->id)->delete();
-
+				$visitsQuery = $this->visitsTable->where('patient', $id)->delete();
 				$result = $this->table->where('id', $id)->delete();
 			} else {
 				$errors = [

@@ -322,6 +322,14 @@ class Visit {
 			$visit = $this->table->find($id);
 
 			if ($visit) {
+				$filesQuery = $this->filesTable->where('visit', $id)->get();
+				foreach ($filesQuery as $file) {
+					$path = __DIR__ . '/../../uploads/' . $file->name;
+					if (is_file($path)) {
+						unlink($path);
+					}
+				}
+				$filesQuery = $this->filesTable->where('visit', $id)->delete();
 				$result = $this->table->where('id', $id)->delete();
 			} else {
 				$errors = [
@@ -373,7 +381,18 @@ class Visit {
 					"visit" => $visitId,
 					"name" => $filename,
 				]);
-				$result[] = ["id" => $fileId, "filename" => $filename, "uploaded" => true];
+				$result[] = [
+					"links" => [
+						"self" => "/files/" . $fileId,
+					],
+					"data" => [
+						"type" => "file",
+						"id" => $fileId,
+						"attributes" => [
+							"name" => $filename,
+						],
+					],
+				];
 			} else {
 				$result[] = ["id" => null, "filename" => $uploadedFile->name, "uploaded" => false];
 			}

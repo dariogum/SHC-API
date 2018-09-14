@@ -43,3 +43,9 @@ $container[\App\Classes\Visit::class] = function ($c) {
 	$filesTable = $c->get('db')->table('visits_files');
 	return new \App\Classes\Visit($logger, $table, $filesTable);
 };
+
+$container[\App\Classes\File::class] = function ($c) {
+	$logger = $c->get('logger');
+	$table = $c->get('db')->table('visits_files');
+	return new \App\Classes\File($logger, $table);
+};
