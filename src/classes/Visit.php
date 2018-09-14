@@ -72,10 +72,10 @@ class Visit {
 
 		if ($withVisitFiles) {
 			$files = $this->filesTable->where('visit', $visit->id)->get();
-			$visitData["relationships"]["files"] = [];
+			$filesData = [];
 
 			foreach ($files as $file) {
-				$fileData = [
+				$filesData[] = [
 					"links" => [
 						"self" => "/files/" . $file->name,
 					],
@@ -87,9 +87,9 @@ class Visit {
 						],
 					],
 				];
-
-				$visitData["relationships"]["files"][] = $fileData;
 			}
+
+			$visitData["relationships"]["files"] = $filesData;
 		}
 
 		return $visitData;

@@ -94,32 +94,13 @@ class Patient {
 
 		if ($withVisits) {
 			$visits = $this->visitsTable->where('patient', $patient->id)->get();
-			$jsonPatient["relationships"]["visits"] = [];
-			$visitData = [];
+			$visitsData = [];
 
 			foreach ($visits as $visit) {
-				$visitData = [
-					"links" => [
-						"self" => "/visits/" . $visit->id,
-					],
-					"data" => [
-						"type" => "visit",
-						"id" => $visit->id,
-						"attributes" => [
-							"patient" => $visit->patient,
-							"date" => $visit->date,
-							"weight" => $visit->weight,
-							"height" => $visit->height,
-							"perimeter" => $visit->perimeter,
-							"diagnosis" => $visit->diagnosis,
-							"treatment" => $visit->treatment,
-						],
-					],
-				];
 
 				if ($withVisitsFiles) {
 					$files = $this->filesTable->where('visit', $visit->id)->get();
-					$visitData["data"]["relationships"]["files"] = [];
+					$filesData = [];
 
 					foreach ($files as $file) {
 						$fileData = [
@@ -135,12 +116,36 @@ class Patient {
 							],
 						];
 
-						$visitData["data"]["relationships"]["files"][] = $fileData;
+						$filesData[] = $fileData;
 					}
 				}
 
-				$jsonPatient["relationships"]["visits"][] = $visitData;
+				$visitData = [
+					"data" => [
+						"type" => "visit",
+						"id" => $visit->id,
+						"attributes" => [
+							"patient" => $visit->patient,
+							"date" => $visit->date,
+							"weight" => $visit->weight,
+							"height" => $visit->height,
+							"perimeter" => $visit->perimeter,
+							"diagnosis" => $visit->diagnosis,
+							"treatment" => $visit->treatment,
+						],
+						"relationships" => [
+							"files" => $filesData,
+						],
+					],
+					"links" => [
+						"self" => "/visits/" . $visit->id,
+					],
+				];
+
+				$visitsData[] = $visitData;
 			}
+
+			$jsonPatient["relationships"]["visits"] = $visitsData;
 		}
 
 		return $jsonPatient;
@@ -252,10 +257,6 @@ class Patient {
 	}
 
 	public function getOne($id, $response) {
-		$result["links"] = [
-			"self" => "/patients/" . $id,
-		];
-
 		$this->logger->info("Get a patient");
 
 		/** Getting the patient **/
@@ -276,7 +277,12 @@ class Patient {
 			return $newResponse;
 		}
 
-		$result["data"] = $data;
+		$result = [
+			"data" => $data,
+			"links" => [
+				"self" => "/patients/" . $id,
+			],
+		];
 
 		$newResponse = $response->withJson($result);
 
