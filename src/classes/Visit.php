@@ -8,9 +8,11 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Log\LoggerInterface;
 
 class Visit {
-	private $logger;
-	protected $table;
 	protected $filesTable;
+
+	protected $table;
+
+	private $logger;
 
 	public function __construct(
 		LoggerInterface $logger,
@@ -55,44 +57,163 @@ class Visit {
 		return $newResponse;
 	}
 
-	private function visitToJson($visit, $withVisitFiles = true) {
-		$visitData = [
-			"type" => "visit",
-			"id" => $visit->id,
-			"attributes" => [
-				"patient" => $visit->patient,
-				"date" => $visit->date,
-				"weight" => $visit->weight,
-				"height" => $visit->height,
-				"perimeter" => $visit->perimeter,
-				"diagnosis" => $visit->diagnosis,
-				"treatment" => $visit->treatment,
-			],
+	public function getOne($id, $response) {
+		$result["links"] = [
+			"self" => "/visits/" . $id,
 		];
 
-		if ($withVisitFiles) {
-			$files = $this->filesTable->where('visit', $visit->id)->get();
-			$filesData = [];
+		$this->logger->info("Get a visit");
 
-			foreach ($files as $file) {
-				$filesData[] = [
+		$visit = $this->table->find($id);
+		$data = [];
+
+		if ($visit) {
+			$data = $this->visitToJson($visit);
+		} else {
+			$errors = [
+				"errors" => [
+					"id" => "404",
+					"status" => "404 Not Found",
+					"title" => "ID Visit not found",
+				],
+			];
+			$newResponse = $response->withJson($errors, 404);
+			return $newResponse;
+		}
+
+		$result["data"] = $data;
+
+		$newResponse = $response->withJson($result);
+
+		return $newResponse;
+	}
+
+	private function add(Request $request, Response $response, $args) {
+		$this->logger->info("Add a visit");
+
+		$body = $request->getParsedBody();
+
+		$attributes = $body['data']['attributes'];
+
+		$visitId = $this->table->insertGetId($attributes);
+
+		if (!$visitId) {
+			$errors = [
+				"errors" => [
+					"id" => "422",
+					"status" => "422 Unprocessable Entity",
+					"title" => "Data format not correct",
+				],
+			];
+			$newResponse = $response->withJson($errors, 422);
+			return $newResponse;
+		}
+
+		$body['data']['id'] = $visitId;
+
+		$result = [
+			"links" => [
+				"self" => "/visits/" . $visitId,
+			],
+			"data" => $body["data"],
+		];
+
+		$newResponse = $response->withJson($result, 201);
+
+		return $newResponse;
+	}
+
+	private function addFiles(Request $request, Response $response, $args) {
+		$this->logger->info("Add files to a visit");
+
+		$result = [];
+		$directory = __DIR__ . '/../../uploads';
+		$getUploadedFiles = $request->getUploadedFiles();
+		$visitId = null;
+
+		if (array_key_exists("id", $args)) {
+			$visitId = $args["id"];
+			$visit = $this->table->find($visitId);
+			if (!$visit) {
+				$errors = [
+					"errors" => [
+						"id" => "404",
+						"status" => "404 Not Found",
+						"title" => "ID Visit not found",
+					],
+				];
+				$newResponse = $response->withJson($errors, 404);
+				return $newResponse;
+			}
+		}
+
+		foreach ($getUploadedFiles['visitFiles'] as $uploadedFile) {
+			if ($uploadedFile->getError() === UPLOAD_ERR_OK) {
+				$filename = $this->moveUploadedFile($directory, $uploadedFile);
+				$fileId = $this->filesTable->insertGetId([
+					"visit" => $visitId,
+					"name" => $filename,
+				]);
+				$result[] = [
 					"links" => [
-						"self" => "/files/" . $file->name,
+						"self" => "/files/" . $fileId,
 					],
 					"data" => [
 						"type" => "file",
-						"id" => $file->id,
+						"id" => $fileId,
 						"attributes" => [
-							"name" => $file->name,
+							"name" => $filename,
 						],
 					],
 				];
+			} else {
+				$result[] = ["id" => null, "filename" => $uploadedFile->name, "uploaded" => false];
 			}
-
-			$visitData["relationships"]["files"] = $filesData;
 		}
 
-		return $visitData;
+		$newResponse = $response->withJson($result);
+
+		return $newResponse;
+	}
+
+	private function delete(Request $request, Response $response, $args) {
+		$this->logger->info("Delete a visit");
+
+		$result = null;
+
+		if (array_key_exists("id", $args)) {
+
+			$id = $args['id'];
+
+			$visit = $this->table->find($id);
+
+			if ($visit) {
+				$filesQuery = $this->filesTable->where('visit', $id)->get();
+				foreach ($filesQuery as $file) {
+					$path = __DIR__ . '/../../uploads/' . $file->name;
+					if (is_file($path)) {
+						unlink($path);
+					}
+				}
+				$filesQuery = $this->filesTable->where('visit', $id)->delete();
+				$result = $this->table->where('id', $id)->delete();
+			} else {
+				$errors = [
+					"errors" => [
+						"id" => "404",
+						"status" => "404 Not Found",
+						"title" => "ID Visit not found",
+					],
+				];
+				$newResponse = $response->withJson($errors, 404);
+				return $newResponse;
+			}
+
+		}
+
+		$newResponse = $response->withJson($result);
+
+		return $newResponse;
 	}
 
 	private function get(Request $request, Response $response, $args) {
@@ -199,70 +320,22 @@ class Visit {
 		return $newResponse;
 	}
 
-	public function getOne($id, $response) {
-		$result["links"] = [
-			"self" => "/visits/" . $id,
-		];
+	/**
+	 * Moves the uploaded file to the upload directory and assigns it a unique name
+	 * to avoid overwriting an existing uploaded file.
+	 *
+	 * @param string $directory directory to which the file is moved
+	 * @param UploadedFile $uploaded file uploaded file to move
+	 * @return string filename of moved file
+	 */
+	private function moveUploadedFile($directory, \Slim\Http\UploadedFile $uploadedFile) {
+		$extension = pathinfo($uploadedFile->getClientFilename(), PATHINFO_EXTENSION);
+		$basename = bin2hex(random_bytes(8)); // see http://php.net/manual/en/function.random-bytes.php
+		$filename = sprintf('%s.%0.8s', $basename, $extension);
 
-		$this->logger->info("Get a visit");
+		$uploadedFile->moveTo($directory . DIRECTORY_SEPARATOR . $filename);
 
-		$visit = $this->table->find($id);
-		$data = [];
-
-		if ($visit) {
-			$data = $this->visitToJson($visit);
-		} else {
-			$errors = [
-				"errors" => [
-					"id" => "404",
-					"status" => "404 Not Found",
-					"title" => "ID Visit not found",
-				],
-			];
-			$newResponse = $response->withJson($errors, 404);
-			return $newResponse;
-		}
-
-		$result["data"] = $data;
-
-		$newResponse = $response->withJson($result);
-
-		return $newResponse;
-	}
-
-	private function add(Request $request, Response $response, $args) {
-		$this->logger->info("Add a visit");
-
-		$body = $request->getParsedBody();
-
-		$attributes = $body['data']['attributes'];
-
-		$visitId = $this->table->insertGetId($attributes);
-
-		if (!$visitId) {
-			$errors = [
-				"errors" => [
-					"id" => "422",
-					"status" => "422 Unprocessable Entity",
-					"title" => "Data format not correct",
-				],
-			];
-			$newResponse = $response->withJson($errors, 422);
-			return $newResponse;
-		}
-
-		$body['data']['id'] = $visitId;
-
-		$result = [
-			"links" => [
-				"self" => "/visits/" . $visitId,
-			],
-			"data" => $body["data"],
-		];
-
-		$newResponse = $response->withJson($result, 201);
-
-		return $newResponse;
+		return $filename;
 	}
 
 	private function update(Request $request, Response $response, $args) {
@@ -310,114 +383,43 @@ class Visit {
 		return $newResponse;
 	}
 
-	private function delete(Request $request, Response $response, $args) {
-		$this->logger->info("Delete a visit");
+	private function visitToJson($visit, $withVisitFiles = true) {
+		$visitData = [
+			"type" => "visit",
+			"id" => $visit->id,
+			"attributes" => [
+				"patient" => $visit->patient,
+				"date" => $visit->date,
+				"weight" => $visit->weight,
+				"height" => $visit->height,
+				"perimeter" => $visit->perimeter,
+				"diagnosis" => $visit->diagnosis,
+				"treatment" => $visit->treatment,
+			],
+		];
 
-		$result = null;
+		if ($withVisitFiles) {
+			$files = $this->filesTable->where('visit', $visit->id)->get();
+			$filesData = [];
 
-		if (array_key_exists("id", $args)) {
-
-			$id = $args['id'];
-
-			$visit = $this->table->find($id);
-
-			if ($visit) {
-				$filesQuery = $this->filesTable->where('visit', $id)->get();
-				foreach ($filesQuery as $file) {
-					$path = __DIR__ . '/../../uploads/' . $file->name;
-					if (is_file($path)) {
-						unlink($path);
-					}
-				}
-				$filesQuery = $this->filesTable->where('visit', $id)->delete();
-				$result = $this->table->where('id', $id)->delete();
-			} else {
-				$errors = [
-					"errors" => [
-						"id" => "404",
-						"status" => "404 Not Found",
-						"title" => "ID Visit not found",
-					],
-				];
-				$newResponse = $response->withJson($errors, 404);
-				return $newResponse;
-			}
-
-		}
-
-		$newResponse = $response->withJson($result);
-
-		return $newResponse;
-	}
-
-	private function addFiles(Request $request, Response $response, $args) {
-		$this->logger->info("Add files to a visit");
-
-		$result = [];
-		$directory = __DIR__ . '/../../uploads';
-		$getUploadedFiles = $request->getUploadedFiles();
-		$visitId = null;
-
-		if (array_key_exists("id", $args)) {
-			$visitId = $args["id"];
-			$visit = $this->table->find($visitId);
-			if (!$visit) {
-				$errors = [
-					"errors" => [
-						"id" => "404",
-						"status" => "404 Not Found",
-						"title" => "ID Visit not found",
-					],
-				];
-				$newResponse = $response->withJson($errors, 404);
-				return $newResponse;
-			}
-		}
-
-		foreach ($getUploadedFiles['visitFiles'] as $uploadedFile) {
-			if ($uploadedFile->getError() === UPLOAD_ERR_OK) {
-				$filename = $this->moveUploadedFile($directory, $uploadedFile);
-				$fileId = $this->filesTable->insertGetId([
-					"visit" => $visitId,
-					"name" => $filename,
-				]);
-				$result[] = [
+			foreach ($files as $file) {
+				$filesData[] = [
 					"links" => [
-						"self" => "/files/" . $fileId,
+						"self" => "/files/" . $file->name,
 					],
 					"data" => [
 						"type" => "file",
-						"id" => $fileId,
+						"id" => $file->id,
 						"attributes" => [
-							"name" => $filename,
+							"name" => $file->name,
 						],
 					],
 				];
-			} else {
-				$result[] = ["id" => null, "filename" => $uploadedFile->name, "uploaded" => false];
 			}
+
+			$visitData["relationships"]["files"] = $filesData;
 		}
 
-		$newResponse = $response->withJson($result);
-
-		return $newResponse;
-	}
-
-	/**
-	 * Moves the uploaded file to the upload directory and assigns it a unique name
-	 * to avoid overwriting an existing uploaded file.
-	 *
-	 * @param string $directory directory to which the file is moved
-	 * @param UploadedFile $uploaded file uploaded file to move
-	 * @return string filename of moved file
-	 */
-	private function moveUploadedFile($directory, \Slim\Http\UploadedFile $uploadedFile) {
-		$extension = pathinfo($uploadedFile->getClientFilename(), PATHINFO_EXTENSION);
-		$basename = bin2hex(random_bytes(8)); // see http://php.net/manual/en/function.random-bytes.php
-		$filename = sprintf('%s.%0.8s', $basename, $extension);
-
-		$uploadedFile->moveTo($directory . DIRECTORY_SEPARATOR . $filename);
-
-		return $filename;
+		return $visitData;
 	}
 }

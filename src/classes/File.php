@@ -9,8 +9,9 @@ use Psr\Log\LoggerInterface;
 use Slim\Http\Stream;
 
 class File {
-	private $logger;
 	protected $table;
+
+	private $logger;
 
 	public function __construct(
 		LoggerInterface $logger,
@@ -93,6 +94,10 @@ class File {
 			$file = $this->table->find($id);
 
 			if ($file) {
+				$path = __DIR__ . '/../../uploads/' . $file->name;
+				if (is_file($path)) {
+					unlink($path);
+				}
 				$result = $this->table->where('id', $id)->delete();
 			} else {
 				$errors = [
