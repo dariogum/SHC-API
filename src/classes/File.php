@@ -20,29 +20,36 @@ class File {
 		$this->table = $table;
 	}
 
+	private function get(Request $request, Response $response, $args) {
+		$newResponse = null;
+
+		if (array_key_exists("id", $args)) {
+			$resource = $this->readById($args["id"]);
+			if (!$resource) {
+				$newResponse = $response->withJson($this->resourceNotFound(), 404);
+			} else {
+				$newResponse = $response->withBody($resource["file_stream"])
+					->withHeader('Content-Disposition', 'inline')
+					->withHeader('Content-Type', mime_content_type($resource["path"]))
+					->withHeader('Content-Length', filesize($resource["path"]));
+			}
+		} else {
+			$collection = $this->readAll($request);
+			if (!$collection) {
+				$newResponse = $response->withJson($this->badRequest(), 400);
+			} else {
+				$newResponse = $response->withJson($collection);
+			}
+		}
+		return $newResponse;
+	}
+
 	public function __invoke(Request $request, Response $response, $args) {
 		$newResponse = null;
 
 		switch ($request->getMethod()) {
 		case "GET":
-			if (array_key_exists("id", $args)) {
-				$resource = $this->readById($args["id"]);
-				if (!$resource) {
-					$newResponse = $response->withJson($this->resourceNotFound(), 404);
-				} else {
-					$newResponse = $response->withBody($resource["file_stream"])
-						->withHeader('Content-Disposition', 'inline')
-						->withHeader('Content-Type', mime_content_type($resource["path"]))
-						->withHeader('Content-Length', filesize($resource["path"]));
-				}
-			} else {
-				$collection = $this->readAll($request);
-				if (!$collection) {
-					$newResponse = $response->withJson($this->badRequest(), 400);
-				} else {
-					$newResponse = $response->withJson($collection);
-				}
-			}
+			$newResponse = $this->get($request, $response, $args);
 			break;
 
 		case "POST":
@@ -257,6 +264,9 @@ class File {
 
 		$path = $this->uploadsPath . $resourceAttributes->name;
 		$fileData = fopen($path, 'rb');
+		if (!$fileData) {
+			return false;
+		}
 		$file_stream = new Stream($fileData);
 
 		return [
@@ -283,7 +293,6 @@ class File {
 				],
 				"links" => [
 					"self" => "/" . $this->url . "/" . $id,
-					"related" => $this->url . "/" . $id . "/files",
 				],
 			];
 			$data[] = $relatedResource;
@@ -291,7 +300,7 @@ class File {
 		$collection = [
 			"data" => $data,
 			"links" => [
-				"self" => $this->url,
+				"self" => "visits/" . $visitId . "/" . $this->url,
 			],
 		];
 		return $collection;
@@ -318,7 +327,6 @@ class File {
 			],
 			"links" => [
 				"self" => $this->url . "/" . $id,
-				"related" => $this->url . "/" . $id . "/files",
 			],
 		];
 		return $resource;

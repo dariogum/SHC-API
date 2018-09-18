@@ -20,12 +20,12 @@ class Visit {
 		$this->file = $file;
 	}
 
-	public function __invoke(Request $request, Response $response, $args) {
+	private function get(Request $request, Response $response, $args) {
 		$newResponse = null;
 
-		switch ($request->getMethod()) {
-		case "GET":
-			if (array_key_exists("id", $args)) {
+		if (array_key_exists("id", $args)) {
+			$visits = strpos($request->getUri()->getPath(), "files");
+			if ($visits === false) {
 				$resource = $this->readById($args["id"]);
 				if (!$resource) {
 					$newResponse = $response->withJson($this->resourceNotFound(), 404);
@@ -33,13 +33,25 @@ class Visit {
 					$newResponse = $response->withJson($resource);
 				}
 			} else {
-				$collection = $this->readAll($request);
-				if (!$collection) {
-					$newResponse = $response->withJson($this->badRequest(), 400);
-				} else {
-					$newResponse = $response->withJson($collection);
-				}
+				$newResponse = $response->withJson($this->file->readByVisit($args["id"]));
 			}
+		} else {
+			$collection = $this->readAll($request);
+			if (!$collection) {
+				$newResponse = $response->withJson($this->badRequest(), 400);
+			} else {
+				$newResponse = $response->withJson($collection);
+			}
+		}
+		return $newResponse;
+	}
+
+	public function __invoke(Request $request, Response $response, $args) {
+		$newResponse = null;
+
+		switch ($request->getMethod()) {
+		case "GET":
+			$newResponse = $this->get($request, $response, $args);
 			break;
 
 		case "POST":
@@ -230,7 +242,7 @@ class Visit {
 			],
 			"links" => [
 				"self" => $this->url . "/" . $id,
-				"related" => $this->url . "/" . $id . "/visits",
+				"related" => $this->url . "/" . $id . "/files",
 			],
 		];
 		return $resource;
@@ -265,7 +277,7 @@ class Visit {
 		$collection = [
 			"data" => $data,
 			"links" => [
-				"self" => $this->url,
+				"self" => "patients/" . $patientId . "/" . $this->url,
 			],
 		];
 		return $collection;
@@ -295,7 +307,7 @@ class Visit {
 			],
 			"links" => [
 				"self" => $this->url . "/" . $id,
-				"related" => $this->url . "/" . $id . "/visits",
+				"related" => $this->url . "/" . $id . "/files",
 			],
 		];
 		return $resource;

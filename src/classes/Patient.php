@@ -20,12 +20,12 @@ class Patient {
 		$this->visit = $visit;
 	}
 
-	public function __invoke(Request $request, Response $response, $args) {
+	private function get(Request $request, Response $response, $args) {
 		$newResponse = null;
 
-		switch ($request->getMethod()) {
-		case "GET":
-			if (array_key_exists("id", $args)) {
+		if (array_key_exists("id", $args)) {
+			$visits = strpos($request->getUri()->getPath(), "visits");
+			if ($visits === false) {
 				$resource = $this->readById($args["id"]);
 				if (!$resource) {
 					$newResponse = $response->withJson($this->resourceNotFound(), 404);
@@ -33,13 +33,25 @@ class Patient {
 					$newResponse = $response->withJson($resource);
 				}
 			} else {
-				$collection = $this->readAll($request);
-				if (!$collection) {
-					$newResponse = $response->withJson($this->badRequest(), 400);
-				} else {
-					$newResponse = $response->withJson($collection);
-				}
+				$newResponse = $response->withJson($this->visit->readByPatient($args["id"]));
 			}
+		} else {
+			$collection = $this->readAll($request);
+			if (!$collection) {
+				$newResponse = $response->withJson($this->badRequest(), 400);
+			} else {
+				$newResponse = $response->withJson($collection);
+			}
+		}
+		return $newResponse;
+	}
+
+	public function __invoke(Request $request, Response $response, $args) {
+		$newResponse = null;
+
+		switch ($request->getMethod()) {
+		case "GET":
+			$newResponse = $this->get($request, $response, $args);
 			break;
 
 		case "POST":
@@ -255,7 +267,7 @@ class Patient {
 				"id" => $id,
 				"type" => $this->resourceType,
 				"relationships" => [
-					"visits" => Visit::readByPatient($id),
+					"visits" => $this->visit->readByPatient($id),
 				],
 			],
 			"links" => [
