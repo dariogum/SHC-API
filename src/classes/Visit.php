@@ -8,46 +8,65 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Log\LoggerInterface;
 
 class Visit {
-	protected $filesTable;
-
-	protected $table;
-
+	private $file;
 	private $logger;
+	private $resourceType = "visit";
+	private $table;
+	private $url = "visits";
 
-	public function __construct(
-		LoggerInterface $logger,
-		Builder $table,
-		Builder $filesTable
-	) {
+	public function __construct(LoggerInterface $logger, Builder $table, File $file) {
 		$this->logger = $logger;
 		$this->table = $table;
-		$this->filesTable = $filesTable;
+		$this->file = $file;
 	}
 
 	public function __invoke(Request $request, Response $response, $args) {
-		$method = $request->getMethod();
+		$newResponse = null;
 
-		$result = [];
-
-		switch ($method) {
-		case 'GET':
-			$newResponse = $this->get($request, $response, $args);
-			break;
-
-		case 'POST':
+		switch ($request->getMethod()) {
+		case "GET":
 			if (array_key_exists("id", $args)) {
-				$newResponse = $this->addFiles($request, $response, $args);
+				$resource = $this->readById($args["id"]);
+				if (!$resource) {
+					$newResponse = $response->withJson($this->resourceNotFound(), 404);
+				} else {
+					$newResponse = $response->withJson($resource);
+				}
 			} else {
-				$newResponse = $this->add($request, $response, $args);
+				$collection = $this->readAll($request);
+				if (!$collection) {
+					$newResponse = $response->withJson($this->badRequest(), 400);
+				} else {
+					$newResponse = $response->withJson($collection);
+				}
 			}
 			break;
 
-		case 'PATCH':
-			$newResponse = $this->update($request, $response, $args);
+		case "POST":
+			$resource = $this->create($request->getParsedBody());
+			if (!$resource) {
+				$newResponse = $response->withJson($this->resourceNotProcessable(), 422);
+			} else {
+				$newResponse = $response->withJson($resource, 201);
+			}
 			break;
 
-		case 'DELETE':
-			$newResponse = $this->delete($request, $response, $args);
+		case "PATCH":
+			if (array_key_exists("id", $args)) {
+				$resource = $this->update($args["id"], $request->getParsedBody());
+				if (!$resource) {
+					$newResponse = $response->withJson($this->resourceNotProcessable(), 422);
+				} else {
+					$newResponse = $response->withJson($resource);
+				}
+			}
+			break;
+
+		case "DELETE":
+			if (array_key_exists("id", $args)) {
+				$status = $this->delete($args["id"]);
+				$newResponse = $response->withJson($status);
+			}
 			break;
 
 		default:
@@ -57,369 +76,233 @@ class Visit {
 		return $newResponse;
 	}
 
-	public function getOne($id, $response) {
-		$result["links"] = [
-			"self" => "/visits/" . $id,
+	private function resourceNotFound() {
+		return [
+			"errors" => [
+				"id" => "404",
+				"status" => "404 Not Found",
+				"title" => $this->resourceType . "not found",
+			],
 		];
-
-		$this->logger->info("Get a visit");
-
-		$visit = $this->table->find($id);
-		$data = [];
-
-		if ($visit) {
-			$data = $this->visitToJson($visit);
-		} else {
-			$errors = [
-				"errors" => [
-					"id" => "404",
-					"status" => "404 Not Found",
-					"title" => "ID Visit not found",
-				],
-			];
-			$newResponse = $response->withJson($errors, 404);
-			return $newResponse;
-		}
-
-		$result["data"] = $data;
-
-		$newResponse = $response->withJson($result);
-
-		return $newResponse;
 	}
 
-	private function add(Request $request, Response $response, $args) {
-		$this->logger->info("Add a visit");
+	private function resourceNotProcessable() {
+		return [
+			"errors" => [
+				"id" => "422",
+				"status" => "422 Unprocessable Entity",
+				"title" => "Data format not correct",
+			],
+		];
+	}
 
-		$body = $request->getParsedBody();
+	private function badRequest() {
+		return [
+			"errors" => [
+				"id" => "400",
+				"status" => "400 Bad Request",
+				"title" => "Query parameters format not correct",
+			],
+		];
+	}
 
-		$attributes = $body['data']['attributes'];
+	public function create($body) {
+		$this->logger->info("Creating a visit");
 
-		$visitId = $this->table->insertGetId($attributes);
-
-		if (!$visitId) {
-			$errors = [
-				"errors" => [
-					"id" => "422",
-					"status" => "422 Unprocessable Entity",
-					"title" => "Data format not correct",
-				],
-			];
-			$newResponse = $response->withJson($errors, 422);
-			return $newResponse;
+		$id = $this->table->insertGetId($body['data']['attributes']);
+		if (!$id) {
+			return false;
 		}
 
-		$body['data']['id'] = $visitId;
-
-		$result = [
+		$resource = [
+			"data" => [
+				"attributes" => $body['data']['attributes'],
+				"id" => $id,
+				"type" => $this->resourceType,
+			],
 			"links" => [
-				"self" => "/visits/" . $visitId,
+				"self" => $this->url . "/" . $id,
+				"related" => $this->url . "/" . $id . "/visits",
 			],
-			"data" => $body["data"],
 		];
-
-		$newResponse = $response->withJson($result, 201);
-
-		return $newResponse;
+		return $resource;
 	}
 
-	private function addFiles(Request $request, Response $response, $args) {
-		$this->logger->info("Add files to a visit");
+	public function readAll($request) {
+		$this->logger->info("Getting all the visits");
 
-		$result = [];
-		$directory = __DIR__ . '/../../uploads';
-		$getUploadedFiles = $request->getUploadedFiles();
-		$visitId = null;
+		$query = $this->table;
 
-		if (array_key_exists("id", $args)) {
-			$visitId = $args["id"];
-			$visit = $this->table->find($visitId);
-			if (!$visit) {
-				$errors = [
-					"errors" => [
-						"id" => "404",
-						"status" => "404 Not Found",
-						"title" => "ID Visit not found",
-					],
-				];
-				$newResponse = $response->withJson($errors, 404);
-				return $newResponse;
+		/** Sorting **/
+		/** Example: /visits?sort=[-]attr1[,[-]attr2,..] **/
+		$sort = $request->getParam('sort');
+		if ($sort) {
+			$columns = explode(',', $sort);
+			foreach ($columns as $column) {
+				$column = explode('-', $column);
+				if (count($column) == 2) {
+					$query = $query->orderBy($column[1], 'desc');
+				} elseif (count($column) == 1) {
+					$query = $query->orderBy($column[0], 'asc');
+				} else {
+					return false;
+				}
 			}
 		}
 
-		foreach ($getUploadedFiles['visitFiles'] as $uploadedFile) {
-			if ($uploadedFile->getError() === UPLOAD_ERR_OK) {
-				$filename = $this->moveUploadedFile($directory, $uploadedFile);
-				$fileId = $this->filesTable->insertGetId([
-					"visit" => $visitId,
-					"name" => $filename,
-				]);
-				$result[] = [
-					"links" => [
-						"self" => "/files/" . $fileId,
-					],
-					"data" => [
-						"type" => "file",
-						"id" => $fileId,
-						"attributes" => [
-							"name" => $filename,
-						],
-					],
-				];
-			} else {
-				$result[] = ["id" => null, "filename" => $uploadedFile->name, "uploaded" => false];
+		/** Filtering **/
+		/** Example: /visits?filter=[-]attr1:string[,[-]attr2:string,..] **/
+		$filter = $request->getParam('filter');
+		if ($filter) {
+			$terms = explode(',', $filter);
+			foreach ($terms as $term) {
+				$parameters = explode(':', $term);
+				if (sizeof($parameters) != 2) {
+					return false;
+				}
+				if (substr($parameters[0], 0, 1) === '-') {
+					$query = $query->where(ltrim($parameters[0], '-'), 'like', '%' . $parameters[1] . '%');
+				} else {
+					$query = $query->orWhere($parameters[0], 'like', '%' . $parameters[1] . '%');
+				}
 			}
 		}
 
-		$newResponse = $response->withJson($result);
+		/** Pagination **/
+		/** ToDo **/
+		$page = $request->getParam('page');
+		if ($page) {
+			switch ($page) {
+			case 'first':
+				$query = $query->take(10);
+				break;
 
-		return $newResponse;
-	}
-
-	private function delete(Request $request, Response $response, $args) {
-		$this->logger->info("Delete a visit");
-
-		$result = null;
-
-		if (array_key_exists("id", $args)) {
-
-			$id = $args['id'];
-
-			$visit = $this->table->find($id);
-
-			if ($visit) {
-				$filesQuery = $this->filesTable->where('visit', $id)->get();
-				foreach ($filesQuery as $file) {
-					$path = __DIR__ . '/../../uploads/' . $file->name;
-					if (is_file($path)) {
-						unlink($path);
-					}
+			default:
+				$limits = explode(',', $page);
+				if (count($limits) != 2) {
+					return false;
 				}
-				$filesQuery = $this->filesTable->where('visit', $id)->delete();
-				$result = $this->table->where('id', $id)->delete();
-			} else {
-				$errors = [
-					"errors" => [
-						"id" => "404",
-						"status" => "404 Not Found",
-						"title" => "ID Visit not found",
-					],
-				];
-				$newResponse = $response->withJson($errors, 404);
-				return $newResponse;
+				$query = $query->skip($limits[0])->take($limits[1]);
+				break;
 			}
-
 		}
 
-		$newResponse = $response->withJson($result);
+		/** Getting the visits **/
+		$data = [];
+		$resources = $query->get();
 
-		return $newResponse;
-	}
-
-	private function get(Request $request, Response $response, $args) {
-		$result["links"] = [
-			"self" => "/visits",
-		];
-
-		if (array_key_exists("id", $args)) {
-			return $this->getOne($args['id'], $response);
-		} else {
-			$this->logger->info("Get visits");
-			$query = $this->table;
-
-			/** Sorting **/
-			/** Example: /visits?sort=[-]attr1[,[-]attr2,..] **/
-			$sort = $request->getParam('sort');
-			if ($sort) {
-				$columns = explode(',', $sort);
-				foreach ($columns as $column) {
-					$column = explode('-', $column);
-					if (count($column) == 2) {
-						$query = $query->orderBy($column[1], 'desc');
-					} elseif (count($column) == 1) {
-						$query = $query->orderBy($column[0], 'asc');
-					} else {
-						$errors = [
-							"errors" => [
-								"id" => "400",
-								"status" => "400 Bad Request",
-								"title" => "Sort format not correct",
-							],
-						];
-						$newResponse = $response->withJson($errors, 400);
-						return $newResponse;
-					}
-				}
-			}
-
-			/** Filtering **/
-			/** Example: /visits?filter=[-]attr1:string[,[-]attr2:string,..] **/
-			$filter = $request->getParam('filter');
-			if ($filter) {
-				$terms = explode(',', $filter);
-				foreach ($terms as $term) {
-					$parameters = explode(':', $term);
-					if (sizeof($parameters) != 2) {
-						$errors = [
-							"errors" => [
-								"id" => "400",
-								"status" => "400 Bad Request",
-								"title" => "Filter format not correct",
-							],
-						];
-						$newResponse = $response->withJson($errors, 400);
-						return $newResponse;
-					}
-					if (substr($parameters[0], 0, 1) === '-') {
-						$query = $query->where(ltrim($parameters[0], '-'), 'like', '%' . $parameters[1] . '%');
-					} else {
-						$query = $query->orWhere($parameters[0], 'like', '%' . $parameters[1] . '%');
-					}
-				}
-			}
-
-			/** Pagination **/
-			/** ToDo **/
-			$page = $request->getParam('page');
-			if ($page) {
-				switch ($page) {
-				case 'first':
-					$query = $query->take(10);
-					break;
-
-				default:
-					$limits = explode(',', $page);
-					if (count($limits) != 2) {
-						$errors = [
-							"errors" => [
-								"id" => "400",
-								"status" => "400 Bad Request",
-								"title" => "Page format not correct",
-							],
-						];
-						$newResponse = $response->withJson($errors, 400);
-						return $newResponse;
-					}
-					$query = $query->skip($limits[0])->take($limits[1]);
-					break;
-				}
-			}
-
-			$visits = $query->get();
-			$data = [];
-
-			foreach ($visits as $visit) {
-				$data[] = $this->visitToJson($visit);
-			}
-
-			$result["data"] = $data;
-		}
-
-		$newResponse = $response->withJson($result);
-
-		return $newResponse;
-	}
-
-	/**
-	 * Moves the uploaded file to the upload directory and assigns it a unique name
-	 * to avoid overwriting an existing uploaded file.
-	 *
-	 * @param string $directory directory to which the file is moved
-	 * @param UploadedFile $uploaded file uploaded file to move
-	 * @return string filename of moved file
-	 */
-	private function moveUploadedFile($directory, \Slim\Http\UploadedFile $uploadedFile) {
-		$extension = pathinfo($uploadedFile->getClientFilename(), PATHINFO_EXTENSION);
-		$basename = bin2hex(random_bytes(8)); // see http://php.net/manual/en/function.random-bytes.php
-		$filename = sprintf('%s.%0.8s', $basename, $extension);
-
-		$uploadedFile->moveTo($directory . DIRECTORY_SEPARATOR . $filename);
-
-		return $filename;
-	}
-
-	private function update(Request $request, Response $response, $args) {
-		$this->logger->info("Update a visit");
-
-		$result = null;
-
-		if (array_key_exists("id", $args)) {
-
-			$id = $args['id'];
-
-			$body = $request->getParsedBody();
-
-			$attributes = $body['data']['attributes'];
-
-			$visit = $this->table->find($id);
-
-			if ($visit && $attributes) {
-				$success = $this->table->where('id', $id)->update($attributes);
-			} else {
-				$errors = [
-					"errors" => [
-						"id" => "404",
-						"status" => "404 Not Found",
-						"title" => "ID Visit not found",
-					],
-				];
-				$newResponse = $response->withJson($errors, 404);
-				return $newResponse;
-			}
-
-			$visit = $this->table->find($id);
-
-			$result = [
-				"links" => [
-					"self" => "/visits/" . $id,
-				],
-				"data" => $visit,
+		foreach ($resources as $resource) {
+			$id = $resource->id;
+			unset($resource->id);
+			$resourceData = [
+				"attributes" => $resource,
+				"id" => $id,
+				"type" => $this->resourceType,
 			];
-
+			$data[] = $resourceData;
 		}
-
-		$newResponse = $response->withJson($result);
-
-		return $newResponse;
-	}
-
-	private function visitToJson($visit, $withVisitFiles = true) {
-		$visitData = [
-			"type" => "visit",
-			"id" => $visit->id,
-			"attributes" => [
-				"patient" => $visit->patient,
-				"date" => $visit->date,
-				"weight" => $visit->weight,
-				"height" => $visit->height,
-				"perimeter" => $visit->perimeter,
-				"diagnosis" => $visit->diagnosis,
-				"treatment" => $visit->treatment,
+		$collection = [
+			"data" => $data,
+			"links" => [
+				"self" => $this->url,
 			],
 		];
+		return $collection;
+	}
 
-		if ($withVisitFiles) {
-			$files = $this->filesTable->where('visit', $visit->id)->get();
-			$filesData = [];
+	public function readById($id) {
+		$this->logger->info("Getting a visit");
 
-			foreach ($files as $file) {
-				$filesData[] = [
-					"links" => [
-						"self" => "/files/" . $file->name,
-					],
-					"data" => [
-						"type" => "file",
-						"id" => $file->id,
-						"attributes" => [
-							"name" => $file->name,
-						],
-					],
-				];
-			}
-
-			$visitData["relationships"]["files"] = $filesData;
+		$resourceAttributes = $this->table->find($id);
+		if (!$resourceAttributes) {
+			return false;
 		}
+		unset($resourceAttributes->id);
 
-		return $visitData;
+		$resource = [
+			"data" => [
+				"attributes" => $resourceAttributes,
+				"id" => $id,
+				"type" => $this->resourceType,
+				"relationships" => [
+					"files" => $this->file->readByVisit($id),
+				],
+			],
+			"links" => [
+				"self" => $this->url . "/" . $id,
+				"related" => $this->url . "/" . $id . "/visits",
+			],
+		];
+		return $resource;
+	}
+
+	public function readByPatient($patientId) {
+		$this->logger->info("Getting all the visits of a patient");
+
+		$data = [];
+		$visitsQueryBuilder = clone $this->table;
+		$resources = $visitsQueryBuilder->where('patient', $patientId)->get();
+
+		foreach ($resources as $resource) {
+			$id = $resource->id;
+			unset($resource->id);
+			$relatedResource = [
+				"data" => [
+					"attributes" => $resource,
+					"id" => $id,
+					"type" => $this->resourceType,
+					"relationships" => [
+						"files" => $this->file->readByVisit($id),
+					],
+				],
+				"links" => [
+					"self" => $this->url . "/" . $id,
+					"related" => $this->url . "/" . $id . "/files",
+				],
+			];
+			$data[] = $relatedResource;
+		}
+		$collection = [
+			"data" => $data,
+			"links" => [
+				"self" => $this->url,
+			],
+		];
+		return $collection;
+	}
+
+	public function update($id, $body) {
+		$this->logger->info("Updating a visit");
+
+		$status = $this->table->where('id', $id)->update($body["data"]["attributes"]);
+		if (!$status) {
+			return false;
+		}
+		$resourceAttributes = $this->table->find($id);
+		if (!$resourceAttributes) {
+			return false;
+		}
+		unset($resourceAttributes->id);
+
+		$resource = [
+			"data" => [
+				"attributes" => $resourceAttributes,
+				"id" => $id,
+				"type" => $this->resourceType,
+				"relationships" => [
+					"files" => $this->file->readByVisit($id),
+				],
+			],
+			"links" => [
+				"self" => $this->url . "/" . $id,
+				"related" => $this->url . "/" . $id . "/visits",
+			],
+		];
+		return $resource;
+	}
+
+	public function delete($id) {
+		$this->logger->info("Deleting a visit");
+		return $this->table->where('id', $id)->delete();
 	}
 }

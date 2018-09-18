@@ -22,30 +22,27 @@ $container['logger'] = function ($c) {
 $container['db'] = function ($c) {
 	$capsule = new \Illuminate\Database\Capsule\Manager;
 	$capsule->addConnection($c['settings']['db']);
-
 	$capsule->setAsGlobal();
 	$capsule->bootEloquent();
-
 	return $capsule;
-};
-
-$container[\App\Classes\Patient::class] = function ($c) {
-	$logger = $c->get('logger');
-	$table = $c->get('db')->table('patients');
-	$visitsTable = $c->get('db')->table('visits');
-	$filesTable = $c->get('db')->table('visits_files');
-	return new \App\Classes\Patient($logger, $table, $visitsTable, $filesTable);
-};
-
-$container[\App\Classes\Visit::class] = function ($c) {
-	$logger = $c->get('logger');
-	$table = $c->get('db')->table('visits');
-	$filesTable = $c->get('db')->table('visits_files');
-	return new \App\Classes\Visit($logger, $table, $filesTable);
 };
 
 $container[\App\Classes\File::class] = function ($c) {
 	$logger = $c->get('logger');
 	$table = $c->get('db')->table('visits_files');
 	return new \App\Classes\File($logger, $table);
+};
+
+$container[\App\Classes\Visit::class] = function ($c) {
+	$logger = $c->get('logger');
+	$table = $c->get('db')->table('visits');
+	$file = $c->get(\App\Classes\File::class);
+	return new \App\Classes\Visit($logger, $table, $file);
+};
+
+$container[\App\Classes\Patient::class] = function ($c) {
+	$logger = $c->get('logger');
+	$table = $c->get('db')->table('patients');
+	$visit = $c->get(\App\Classes\Visit::class);
+	return new \App\Classes\Patient($logger, $table, $visit);
 };
