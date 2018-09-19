@@ -24,23 +24,52 @@ class Visit {
 		$newResponse = null;
 
 		if (array_key_exists("id", $args)) {
-			$visits = strpos($request->getUri()->getPath(), "files");
-			if ($visits === false) {
+			$files = strpos($request->getUri()->getPath(), "files");
+			if ($files !== false) {
+				$newResponse = $response->withJson($this->file->readByVisit($args["id"]));
+			} else {
 				$resource = $this->readById($args["id"]);
 				if (!$resource) {
 					$newResponse = $response->withJson($this->resourceNotFound(), 404);
 				} else {
 					$newResponse = $response->withJson($resource);
 				}
-			} else {
-				$newResponse = $response->withJson($this->file->readByVisit($args["id"]));
 			}
 		} else {
-			$collection = $this->readAll($request);
-			if (!$collection) {
-				$newResponse = $response->withJson($this->badRequest(), 400);
+			$reports = strpos($request->getUri()->getPath(), "reports");
+			if ($reports !== false) {
+				if (array_key_exists("report", $args) && array_key_exists("dates", $args)) {
+					$dates = explode(',', $args["dates"]);
+					if (count($dates) === 2) {
+						switch ($args["report"]) {
+						case 'total':
+							$newResponse = $response->withJson($this->total($dates));
+							break;
+
+						case 'totalByPatients':
+							$newResponse = $response->withJson($this->totalByPatients($dates));
+							break;
+
+						case 'totalBySocialSecurity':
+							$newResponse = $response->withJson($this->totalBySocialSecurity($dates));
+							break;
+
+						default:
+							break;
+						}
+					} else {
+						$newResponse = $response->withJson($this->badRequest(), 400);
+					}
+				} else {
+					$newResponse = $response->withJson($this->badRequest(), 400);
+				}
 			} else {
-				$newResponse = $response->withJson($collection);
+				$collection = $this->readAll($request);
+				if (!$collection) {
+					$newResponse = $response->withJson($this->badRequest(), 400);
+				} else {
+					$newResponse = $response->withJson($collection);
+				}
 			}
 		}
 		return $newResponse;
@@ -316,5 +345,28 @@ class Visit {
 	public function delete($id) {
 		$this->logger->info("Deleting a visit");
 		return $this->table->where('id', $id)->delete();
+	}
+
+	public function total($dates) {
+		return $this->table
+			->whereBetween('date', [$dates[0], $dates[1]])
+			->count();
+	}
+
+	public function totalByPatients($dates) {
+		return $this->table
+			->select('patient', $this->table->raw('count(*) as totalVisits'))
+			->whereBetween('date', [$dates[0], $dates[1]])
+			->groupBy('patient')
+			->get();
+	}
+
+	public function totalBySocialSecurity($dates) {
+		return $this->table
+			->select('patients.socialSecurity1', $this->table->raw('count(*) as totalVisits'))
+			->whereBetween('date', [$dates[0], $dates[1]])
+			->join('patients', 'patient', '=', 'patients.id')
+			->groupBy('patients.socialSecurity1')
+			->get();
 	}
 }

@@ -141,6 +141,7 @@ class File {
 
 		foreach ($getUploadedFiles['visitFiles'] as $uploadedFile) {
 			if ($uploadedFile->getError() === UPLOAD_ERR_OK) {
+				//\Cloudinary\Uploader::upload("sample.jpg", array("crop"=>"limit", "tags"=>"samples", "width"=>3000, "height"=>2000));
 				$filename = $this->moveUploadedFile($this->uploadsPath, $uploadedFile);
 				$id = $this->table->insertGetId([
 					"visit" => $getParsedBody["visit"],

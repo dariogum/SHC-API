@@ -27,6 +27,12 @@ $container['db'] = function ($c) {
 	return $capsule;
 };
 
+// cloudinary
+$container['cloudinary'] = function ($c) {
+	$config = $c->get('cloudinary')['config'];
+	return $config;
+};
+
 $container[\App\Classes\File::class] = function ($c) {
 	$logger = $c->get('logger');
 	$table = $c->get('db')->table('visits_files');

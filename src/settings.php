@@ -27,5 +27,14 @@ return [
 			'collation' => 'utf8_unicode_ci',
 			'prefix' => '',
 		],
+
+		// Cloudinary
+		'cloudinary' => [
+			"config" => \Cloudinary::config(array(
+				"cloud_name" => "dariogum",
+				"api_key" => "244237768155815",
+				"api_secret" => "ObI2a3agFKHGrw2kg4drUz9CJAc",
+			)),
+		],
 	],
 ];
