@@ -52,3 +52,9 @@ $container[\App\Classes\Patient::class] = function ($c) {
 	$visit = $c->get(\App\Classes\Visit::class);
 	return new \App\Classes\Patient($logger, $table, $visit);
 };
+
+$container[\App\Classes\User::class] = function ($c) {
+	$logger = $c->get('logger');
+	$table = $c->get('db')->table('users');
+	return new \App\Classes\User($logger, $table);
+};

@@ -7,73 +7,33 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Log\LoggerInterface;
 
-class Visit {
-	private $file;
+class User {
 	private $logger;
-	private $resourceType = "visit";
+	private $resourceType = "user";
 	private $table;
-	private $url = "visits";
+	private $url = "users";
 
-	public function __construct(LoggerInterface $logger, Builder $table, File $file) {
+	public function __construct(LoggerInterface $logger, Builder $table) {
 		$this->logger = $logger;
 		$this->table = $table;
-		$this->file = $file;
 	}
 
 	private function get(Request $request, Response $response, $args) {
 		$newResponse = null;
 
 		if (array_key_exists("id", $args)) {
-			$files = strpos($request->getUri()->getPath(), "files");
-			if ($files !== false) {
-				$newResponse = $response->withJson($this->file->readByVisit($args["id"]));
+			$resource = $this->readById($args["id"]);
+			if (!$resource) {
+				$newResponse = $response->withJson($this->resourceNotFound(), 404);
 			} else {
-				$resource = $this->readById($args["id"]);
-				if (!$resource) {
-					$newResponse = $response->withJson($this->resourceNotFound(), 404);
-				} else {
-					$newResponse = $response->withJson($resource);
-				}
+				$newResponse = $response->withJson($resource);
 			}
 		} else {
-			$reports = strpos($request->getUri()->getPath(), "stats");
-			if ($reports !== false) {
-				if (array_key_exists("report", $args) && array_key_exists("dates", $args)) {
-					$dates = explode(',', $args["dates"]);
-					if (count($dates) === 2) {
-						switch ($args["report"]) {
-						case 'total':
-							$newResponse = $response->withJson($this->total($dates));
-							break;
-
-						case 'totalByPatients':
-							$newResponse = $response->withJson($this->totalByPatients($dates));
-							break;
-
-						case 'totalBySocialSecurity':
-							$newResponse = $response->withJson($this->totalBySocialSecurity($dates));
-							break;
-
-						case 'totalByMonth':
-							$newResponse = $response->withJson($this->totalByMonth($dates));
-							break;
-
-						default:
-							break;
-						}
-					} else {
-						$newResponse = $response->withJson($this->badRequest(), 400);
-					}
-				} else {
-					$newResponse = $response->withJson($this->badRequest(), 400);
-				}
+			$collection = $this->readAll($request);
+			if (!$collection) {
+				$newResponse = $response->withJson($this->badRequest(), 400);
 			} else {
-				$collection = $this->readAll($request);
-				if (!$collection) {
-					$newResponse = $response->withJson($this->badRequest(), 400);
-				} else {
-					$newResponse = $response->withJson($collection);
-				}
+				$newResponse = $response->withJson($collection);
 			}
 		}
 		return $newResponse;
@@ -88,11 +48,17 @@ class Visit {
 			break;
 
 		case "POST":
-			$resource = $this->create($request->getParsedBody());
-			if (!$resource) {
-				$newResponse = $response->withJson($this->resourceNotProcessable(), 422);
+			$login = strpos($request->getUri()->getPath(), "login");
+			if ($login) {
+				$resource = $this->verifyByEmail($request->getParsedBody());
+				$newResponse = $response->withJson($resource);
 			} else {
-				$newResponse = $response->withJson($resource, 201);
+				$resource = $this->create($request->getParsedBody());
+				if (!$resource) {
+					$newResponse = $response->withJson($this->resourceNotProcessable(), 422);
+				} else {
+					$newResponse = $response->withJson($resource, 201);
+				}
 			}
 			break;
 
@@ -152,7 +118,9 @@ class Visit {
 	}
 
 	public function create($body) {
-		$this->logger->info("Creating a visit");
+		$this->logger->info("Creating a user");
+
+		$body["data"]['attributes']["password"] = password_hash($body["data"]['attributes']["password"], PASSWORD_DEFAULT);
 
 		$id = $this->table->insertGetId($body['data']['attributes']);
 		if (!$id) {
@@ -167,19 +135,18 @@ class Visit {
 			],
 			"links" => [
 				"self" => $this->url . "/" . $id,
-				"related" => $this->url . "/" . $id . "/visits",
 			],
 		];
 		return $resource;
 	}
 
 	public function readAll($request) {
-		$this->logger->info("Getting all the visits");
+		$this->logger->info("Getting all the users");
 
 		$query = $this->table;
 
 		/** Sorting **/
-		/** Example: /visits?sort=[-]attr1[,[-]attr2,..] **/
+		/** Example: /users?sort=[-]attr1[,[-]attr2,..] **/
 		$sort = $request->getParam('sort');
 		if ($sort) {
 			$columns = explode(',', $sort);
@@ -196,7 +163,7 @@ class Visit {
 		}
 
 		/** Filtering **/
-		/** Example: /visits?filter=[-]attr1:string[,[-]attr2:string,..] **/
+		/** Example: /users?filter=[-]attr1:string[,[-]attr2:string,..] **/
 		$filter = $request->getParam('filter');
 		if ($filter) {
 			$terms = explode(',', $filter);
@@ -232,7 +199,7 @@ class Visit {
 			}
 		}
 
-		/** Getting the visits **/
+		/** Getting the users **/
 		$data = [];
 		$resources = $query->get();
 
@@ -256,7 +223,7 @@ class Visit {
 	}
 
 	public function readById($id) {
-		$this->logger->info("Getting a visit");
+		$this->logger->info("Getting a user");
 
 		$resourceAttributes = $this->table->find($id);
 		if (!$resourceAttributes) {
@@ -269,55 +236,44 @@ class Visit {
 				"attributes" => $resourceAttributes,
 				"id" => $id,
 				"type" => $this->resourceType,
-				"relationships" => [
-					"files" => $this->file->readByVisit($id),
-				],
 			],
 			"links" => [
 				"self" => $this->url . "/" . $id,
-				"related" => $this->url . "/" . $id . "/files",
 			],
 		];
 		return $resource;
 	}
 
-	public function readByPatient($patientId) {
-		$this->logger->info("Getting all the visits of a patient");
+	public function verifyByEmail($body) {
+		$this->logger->info("Verifying a user login");
 
-		$data = [];
-		$visitsQueryBuilder = clone $this->table;
-		$resources = $visitsQueryBuilder->where('patient', $patientId)->get();
-
-		foreach ($resources as $resource) {
-			$id = $resource->id;
-			unset($resource->id);
-			$relatedResource = [
-				"data" => [
-					"attributes" => $resource,
-					"id" => $id,
-					"type" => $this->resourceType,
-					"relationships" => [
-						"files" => $this->file->readByVisit($id),
-					],
-				],
-				"links" => [
-					"self" => $this->url . "/" . $id,
-					"related" => $this->url . "/" . $id . "/files",
-				],
-			];
-			$data[] = $relatedResource;
+		$user = $this->table->where('email', $body["email"])->first();
+		if (!$user) {
+			return false;
 		}
-		$collection = [
-			"data" => $data,
+		if (!password_verify($body["password"], $user->password)) {
+			return false;
+		}
+
+		$resource = [
+			"data" => [
+				"attributes" => $user,
+				"id" => $user->id,
+				"type" => $this->resourceType,
+			],
 			"links" => [
-				"self" => "patients/" . $patientId . "/" . $this->url,
+				"self" => $this->url . "/" . $user->id,
 			],
 		];
-		return $collection;
+		return $resource;
 	}
 
 	public function update($id, $body) {
-		$this->logger->info("Updating a visit");
+		$this->logger->info("Updating a user");
+
+		if (array_key_exists("password", $body["data"]['attributes'])) {
+			$body["data"]['attributes']["password"] = password_hash($body["data"]['attributes']["password"], PASSWORD_DEFAULT);
+		}
 
 		$status = $this->table->where('id', $id)->update($body["data"]["attributes"]);
 		if (!$status) {
@@ -334,52 +290,16 @@ class Visit {
 				"attributes" => $resourceAttributes,
 				"id" => $id,
 				"type" => $this->resourceType,
-				"relationships" => [
-					"files" => $this->file->readByVisit($id),
-				],
 			],
 			"links" => [
 				"self" => $this->url . "/" . $id,
-				"related" => $this->url . "/" . $id . "/files",
 			],
 		];
 		return $resource;
 	}
 
 	public function delete($id) {
-		$this->logger->info("Deleting a visit");
+		$this->logger->info("Deleting a user");
 		return $this->table->where('id', $id)->delete();
-	}
-
-	public function total($dates) {
-		return $this->table
-			->whereBetween('date', [$dates[0], $dates[1]])
-			->count();
-	}
-
-	public function totalByPatients($dates) {
-		return $this->table
-			->select('patient', $this->table->raw('count(*) as totalVisits'))
-			->whereBetween('date', [$dates[0], $dates[1]])
-			->groupBy('patient')
-			->get();
-	}
-
-	public function totalBySocialSecurity($dates) {
-		return $this->table
-			->select('patients.socialSecurity1', $this->table->raw('count(*) as totalVisits'))
-			->whereBetween('date', [$dates[0], $dates[1]])
-			->join('patients', 'patient', '=', 'patients.id')
-			->groupBy('patients.socialSecurity1')
-			->get();
-	}
-
-	public function totalByMonth($dates) {
-		return $this->table
-			->select($this->table->raw('MONTH(date) as month, YEAR(date) as year, count(*) as totalVisits'))
-			->whereBetween('date', [$dates[0], $dates[1]])
-			->groupBy('month', 'year')
-			->orderBy('year', 'month')
-			->get();
 	}
 }

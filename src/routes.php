@@ -31,9 +31,15 @@ $app->post('/v1/visits', \App\Classes\Visit::class);
 $app->patch('/v1/visits/{id:\d+}', \App\Classes\Visit::class);
 $app->delete('/v1/visits/{id:\d+}', \App\Classes\Visit::class);
 
-$app->get('/v1/visits/reports/{report}/{dates}', \App\Classes\Visit::class);
+$app->get('/v1/stats/{report}/{dates}', \App\Classes\Visit::class);
 
 $app->get('/v1/files/{id:\d+}', \App\Classes\File::class);
 $app->post('/v1/files', \App\Classes\File::class);
 $app->patch('/v1/files/{id:\d+}', \App\Classes\File::class);
 $app->delete('/v1/files/{id:\d+}', \App\Classes\File::class);
+
+$app->get('/v1/users/{id:\d+}', \App\Classes\User::class);
+$app->post('/v1/users', \App\Classes\User::class);
+$app->post('/v1/users/login', \App\Classes\User::class);
+$app->patch('/v1/users/{id:\d+}', \App\Classes\User::class);
+$app->delete('/v1/users/{id:\d+}', \App\Classes\User::class);
