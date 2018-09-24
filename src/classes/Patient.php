@@ -93,7 +93,7 @@ class Patient {
 			"errors" => [
 				"id" => "404",
 				"status" => "404 Not Found",
-				"title" => $this->resourceType . "not found",
+				"title" => $this->resourceType . " not found",
 			],
 		];
 	}

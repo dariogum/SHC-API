@@ -31,7 +31,7 @@ $app->post('/v1/visits', \App\Classes\Visit::class);
 $app->patch('/v1/visits/{id:\d+}', \App\Classes\Visit::class);
 $app->delete('/v1/visits/{id:\d+}', \App\Classes\Visit::class);
 
-$app->get('/v1/stats/{report}/{dates}', \App\Classes\Visit::class);
+$app->get('/v1/stats/{report}/{dates}', \App\Classes\Stats::class);
 
 $app->get('/v1/files/{id:\d+}', \App\Classes\File::class);
 $app->post('/v1/files', \App\Classes\File::class);

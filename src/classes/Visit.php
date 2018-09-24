@@ -36,44 +36,11 @@ class Visit {
 				}
 			}
 		} else {
-			$reports = strpos($request->getUri()->getPath(), "stats");
-			if ($reports !== false) {
-				if (array_key_exists("report", $args) && array_key_exists("dates", $args)) {
-					$dates = explode(',', $args["dates"]);
-					if (count($dates) === 2) {
-						switch ($args["report"]) {
-						case 'total':
-							$newResponse = $response->withJson($this->total($dates));
-							break;
-
-						case 'totalByPatients':
-							$newResponse = $response->withJson($this->totalByPatients($dates));
-							break;
-
-						case 'totalBySocialSecurity':
-							$newResponse = $response->withJson($this->totalBySocialSecurity($dates));
-							break;
-
-						case 'totalByMonth':
-							$newResponse = $response->withJson($this->totalByMonth($dates));
-							break;
-
-						default:
-							break;
-						}
-					} else {
-						$newResponse = $response->withJson($this->badRequest(), 400);
-					}
-				} else {
-					$newResponse = $response->withJson($this->badRequest(), 400);
-				}
+			$collection = $this->readAll($request);
+			if (!$collection) {
+				$newResponse = $response->withJson($this->badRequest(), 400);
 			} else {
-				$collection = $this->readAll($request);
-				if (!$collection) {
-					$newResponse = $response->withJson($this->badRequest(), 400);
-				} else {
-					$newResponse = $response->withJson($collection);
-				}
+				$newResponse = $response->withJson($collection);
 			}
 		}
 		return $newResponse;
@@ -126,7 +93,7 @@ class Visit {
 			"errors" => [
 				"id" => "404",
 				"status" => "404 Not Found",
-				"title" => $this->resourceType . "not found",
+				"title" => $this->resourceType . " not found",
 			],
 		];
 	}
@@ -349,37 +316,5 @@ class Visit {
 	public function delete($id) {
 		$this->logger->info("Deleting a visit");
 		return $this->table->where('id', $id)->delete();
-	}
-
-	public function total($dates) {
-		return $this->table
-			->whereBetween('date', [$dates[0], $dates[1]])
-			->count();
-	}
-
-	public function totalByPatients($dates) {
-		return $this->table
-			->select('patient', $this->table->raw('count(*) as totalVisits'))
-			->whereBetween('date', [$dates[0], $dates[1]])
-			->groupBy('patient')
-			->get();
-	}
-
-	public function totalBySocialSecurity($dates) {
-		return $this->table
-			->select('patients.socialSecurity1', $this->table->raw('count(*) as totalVisits'))
-			->whereBetween('date', [$dates[0], $dates[1]])
-			->join('patients', 'patient', '=', 'patients.id')
-			->groupBy('patients.socialSecurity1')
-			->get();
-	}
-
-	public function totalByMonth($dates) {
-		return $this->table
-			->select($this->table->raw('MONTH(date) as month, YEAR(date) as year, count(*) as totalVisits'))
-			->whereBetween('date', [$dates[0], $dates[1]])
-			->groupBy('month', 'year')
-			->orderBy('year', 'month')
-			->get();
 	}
 }

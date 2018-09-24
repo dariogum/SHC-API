@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1:3306
--- Tiempo de generación: 21-09-2018 a las 15:23:06
+-- Tiempo de generación: 24-09-2018 a las 17:11:40
 -- Versión del servidor: 5.7.21
 -- Versión de PHP: 7.2.4
 
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS `patients` (
   KEY `doc` (`doc`),
   KEY `createdBy` (`createdBy`),
   KEY `modifiedBy` (`modifiedBy`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 --
 -- Disparadores `patients`
@@ -81,6 +81,20 @@ DELIMITER $$
 CREATE TRIGGER `PatientsModifiedAt` BEFORE UPDATE ON `patients` FOR EACH ROW SET NEW.modifiedAt = NOW()
 $$
 DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `social_securities`
+--
+
+DROP TABLE IF EXISTS `social_securities`;
+CREATE TABLE IF NOT EXISTS `social_securities` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(256) COLLATE utf8_unicode_ci NOT NULL,
+  `accepted` tinyint(1) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -116,16 +130,16 @@ CREATE TABLE IF NOT EXISTS `visits` (
   `perimeter` decimal(10,0) DEFAULT NULL,
   `diagnosis` text COLLATE utf8_unicode_ci NOT NULL,
   `treatment` text COLLATE utf8_unicode_ci,
-  `createdBy` int(11) NOT NULL,
+  `createdBy` int(11) NOT NULL DEFAULT '1',
   `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `modifiedBy` int(11) NOT NULL,
+  `modifiedBy` int(11) NOT NULL DEFAULT '1',
   `modifiedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `patient` (`patient`),
   KEY `date` (`date`),
   KEY `createdBy` (`createdBy`),
   KEY `modifiedBy` (`modifiedBy`)
-) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=28 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 --
 -- Disparadores `visits`
@@ -149,7 +163,7 @@ CREATE TABLE IF NOT EXISTS `visits_files` (
   `name` varchar(256) COLLATE utf8_unicode_ci NOT NULL,
   PRIMARY KEY (`id`),
   KEY `visit` (`visit`)
-) ENGINE=InnoDB AUTO_INCREMENT=114 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=138 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 --
 -- Restricciones para tablas volcadas

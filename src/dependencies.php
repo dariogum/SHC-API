@@ -58,3 +58,11 @@ $container[\App\Classes\User::class] = function ($c) {
 	$table = $c->get('db')->table('users');
 	return new \App\Classes\User($logger, $table);
 };
+
+$container[\App\Classes\Stats::class] = function ($c) {
+	$logger = $c->get('logger');
+	$patients = $c->get('db')->table('patients');
+	$users = $c->get('db')->table('users');
+	$visits = $c->get('db')->table('visits');
+	return new \App\Classes\Stats($logger, $patients, $users, $visits);
+};
