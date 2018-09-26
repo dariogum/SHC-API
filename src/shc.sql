@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1:3306
--- Tiempo de generación: 24-09-2018 a las 17:11:40
+-- Tiempo de generación: 26-09-2018 a las 09:53:10
 -- Versión del servidor: 5.7.21
--- Versión de PHP: 7.2.4
+-- Versión de PHP: 5.6.35
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET AUTOCOMMIT = 0;
@@ -54,16 +54,17 @@ CREATE TABLE IF NOT EXISTS `patients` (
   `weightNewborn` decimal(10,0) DEFAULT NULL,
   `bloodType` int(11) DEFAULT NULL,
   `rhFactor` int(11) DEFAULT NULL,
-  `apgar` int(11) DEFAULT NULL,
+  `apgar1` int(11) DEFAULT NULL,
+  `apgar2` int(11) DEFAULT NULL,
   `gestationalAge` int(11) DEFAULT NULL,
   `comments` text COLLATE utf8_unicode_ci,
   `father` text COLLATE utf8_unicode_ci,
   `mother` text COLLATE utf8_unicode_ci,
   `brothers` text COLLATE utf8_unicode_ci,
   `others` text COLLATE utf8_unicode_ci,
-  `createdBy` int(11) NOT NULL,
+  `createdBy` int(11) NOT NULL DEFAULT '1',
   `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `modifiedBy` int(11) NOT NULL,
+  `modifiedBy` int(11) NOT NULL DEFAULT '1',
   `modifiedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `lastname` (`lastname`),
@@ -71,7 +72,14 @@ CREATE TABLE IF NOT EXISTS `patients` (
   KEY `doc` (`doc`),
   KEY `createdBy` (`createdBy`),
   KEY `modifiedBy` (`modifiedBy`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `patients`
+--
+
+INSERT INTO `patients` (`id`, `lastname`, `name`, `birthday`, `gender`, `docType`, `doc`, `phone1`, `phone2`, `country`, `state`, `city`, `street`, `number`, `floor`, `apartment`, `socialSecurity1`, `socialSecurity1Number`, `socialSecurity2`, `socialSecurity2Number`, `birthType`, `weightNewborn`, `bloodType`, `rhFactor`, `apgar1`, `apgar2`, `gestationalAge`, `comments`, `father`, `mother`, `brothers`, `others`, `createdBy`, `createdAt`, `modifiedBy`, `modifiedAt`) VALUES
+(6, 'De Prueba', 'Paciente', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 8, 9, NULL, NULL, NULL, NULL, NULL, NULL, 1, '2018-09-25 01:28:58', 1, '2018-09-25 22:14:02');
 
 --
 -- Disparadores `patients`
@@ -112,7 +120,14 @@ CREATE TABLE IF NOT EXISTS `users` (
   `enabled` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `users`
+--
+
+INSERT INTO `users` (`id`, `email`, `password`, `lastname`, `name`, `enabled`) VALUES
+(1, 'dariogum@hotmail.com', '$2y$10$M4mL7fmJYHS61CbHyoruVeih90ww/MCjH8Bz36dXLLRstGYGA.5Jy', 'Uberti Manassero', 'Darío', 1);
 
 -- --------------------------------------------------------
 
@@ -128,6 +143,7 @@ CREATE TABLE IF NOT EXISTS `visits` (
   `weight` decimal(10,0) DEFAULT NULL,
   `height` decimal(10,0) DEFAULT NULL,
   `perimeter` decimal(10,0) DEFAULT NULL,
+  `bloodPressure` varchar(7) COLLATE utf8_unicode_ci DEFAULT NULL,
   `diagnosis` text COLLATE utf8_unicode_ci NOT NULL,
   `treatment` text COLLATE utf8_unicode_ci,
   `createdBy` int(11) NOT NULL DEFAULT '1',
@@ -139,7 +155,14 @@ CREATE TABLE IF NOT EXISTS `visits` (
   KEY `date` (`date`),
   KEY `createdBy` (`createdBy`),
   KEY `modifiedBy` (`modifiedBy`)
-) ENGINE=InnoDB AUTO_INCREMENT=28 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=29 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `visits`
+--
+
+INSERT INTO `visits` (`id`, `patient`, `date`, `weight`, `height`, `perimeter`, `bloodPressure`, `diagnosis`, `treatment`, `createdBy`, `createdAt`, `modifiedBy`, `modifiedAt`) VALUES
+(28, 6, '2018-09-24', '123', '132', '132', '132/789', 'asd', NULL, 1, '2018-09-25 01:47:45', 1, '2018-09-25 01:51:00');
 
 --
 -- Disparadores `visits`
