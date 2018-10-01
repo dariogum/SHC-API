@@ -255,6 +255,8 @@ class User {
 			return false;
 		}
 
+		unset($user->password);
+
 		$resource = [
 			"data" => [
 				"attributes" => $user,

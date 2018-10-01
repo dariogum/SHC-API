@@ -121,6 +121,9 @@ class Patient {
 	public function create($body) {
 		$this->logger->info("Creating a patient");
 
+		$body['data']['attributes']['lastname'] = ucwords(strtolower($body['data']['attributes']['lastname']));
+		$body['data']['attributes']['name'] = ucwords(strtolower($body['data']['attributes']['name']));
+
 		$id = $this->table->insertGetId($body['data']['attributes']);
 		if (!$id) {
 			return false;
@@ -250,6 +253,9 @@ class Patient {
 
 	public function update($id, $body) {
 		$this->logger->info("Updating a patient");
+
+		$body['data']['attributes']['lastname'] = ucwords(strtolower($body['data']['attributes']['lastname']));
+		$body['data']['attributes']['name'] = ucwords(strtolower($body['data']['attributes']['name']));
 
 		$status = $this->table->where('id', $id)->update($body["data"]["attributes"]);
 		if (!$status) {
