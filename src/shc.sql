@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1:3306
--- Tiempo de generación: 26-09-2018 a las 09:53:10
+-- Tiempo de generación: 26-09-2018 a las 16:03:51
 -- Versión del servidor: 5.7.21
--- Versión de PHP: 5.6.35
+-- Versión de PHP: 7.2.4
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET AUTOCOMMIT = 0;
@@ -29,8 +29,8 @@ SET time_zone = "+00:00";
 --
 
 DROP TABLE IF EXISTS `patients`;
-CREATE TABLE IF NOT EXISTS `patients` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `patients` (
+  `id` int(11) NOT NULL,
   `lastname` varchar(256) COLLATE utf8_unicode_ci NOT NULL,
   `name` varchar(256) COLLATE utf8_unicode_ci NOT NULL,
   `birthday` date DEFAULT NULL,
@@ -65,21 +65,8 @@ CREATE TABLE IF NOT EXISTS `patients` (
   `createdBy` int(11) NOT NULL DEFAULT '1',
   `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `modifiedBy` int(11) NOT NULL DEFAULT '1',
-  `modifiedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `lastname` (`lastname`),
-  KEY `name` (`name`),
-  KEY `doc` (`doc`),
-  KEY `createdBy` (`createdBy`),
-  KEY `modifiedBy` (`modifiedBy`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
---
--- Volcado de datos para la tabla `patients`
---
-
-INSERT INTO `patients` (`id`, `lastname`, `name`, `birthday`, `gender`, `docType`, `doc`, `phone1`, `phone2`, `country`, `state`, `city`, `street`, `number`, `floor`, `apartment`, `socialSecurity1`, `socialSecurity1Number`, `socialSecurity2`, `socialSecurity2Number`, `birthType`, `weightNewborn`, `bloodType`, `rhFactor`, `apgar1`, `apgar2`, `gestationalAge`, `comments`, `father`, `mother`, `brothers`, `others`, `createdBy`, `createdAt`, `modifiedBy`, `modifiedAt`) VALUES
-(6, 'De Prueba', 'Paciente', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 8, 9, NULL, NULL, NULL, NULL, NULL, NULL, 1, '2018-09-25 01:28:58', 1, '2018-09-25 22:14:02');
+  `modifiedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 --
 -- Disparadores `patients`
@@ -93,41 +80,18 @@ DELIMITER ;
 -- --------------------------------------------------------
 
 --
--- Estructura de tabla para la tabla `social_securities`
---
-
-DROP TABLE IF EXISTS `social_securities`;
-CREATE TABLE IF NOT EXISTS `social_securities` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(256) COLLATE utf8_unicode_ci NOT NULL,
-  `accepted` tinyint(1) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
--- --------------------------------------------------------
-
---
 -- Estructura de tabla para la tabla `users`
 --
 
 DROP TABLE IF EXISTS `users`;
-CREATE TABLE IF NOT EXISTS `users` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL,
   `email` varchar(256) COLLATE utf8_unicode_ci NOT NULL,
   `password` varchar(256) COLLATE utf8_unicode_ci NOT NULL,
   `lastname` varchar(256) COLLATE utf8_unicode_ci NOT NULL,
   `name` varchar(256) COLLATE utf8_unicode_ci NOT NULL,
-  `enabled` tinyint(1) NOT NULL DEFAULT '1',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
---
--- Volcado de datos para la tabla `users`
---
-
-INSERT INTO `users` (`id`, `email`, `password`, `lastname`, `name`, `enabled`) VALUES
-(1, 'dariogum@hotmail.com', '$2y$10$M4mL7fmJYHS61CbHyoruVeih90ww/MCjH8Bz36dXLLRstGYGA.5Jy', 'Uberti Manassero', 'Darío', 1);
+  `enabled` tinyint(1) NOT NULL DEFAULT '1'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -136,8 +100,8 @@ INSERT INTO `users` (`id`, `email`, `password`, `lastname`, `name`, `enabled`) V
 --
 
 DROP TABLE IF EXISTS `visits`;
-CREATE TABLE IF NOT EXISTS `visits` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `visits` (
+  `id` int(11) NOT NULL,
   `patient` int(11) NOT NULL,
   `date` date NOT NULL,
   `weight` decimal(10,0) DEFAULT NULL,
@@ -149,20 +113,8 @@ CREATE TABLE IF NOT EXISTS `visits` (
   `createdBy` int(11) NOT NULL DEFAULT '1',
   `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `modifiedBy` int(11) NOT NULL DEFAULT '1',
-  `modifiedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `patient` (`patient`),
-  KEY `date` (`date`),
-  KEY `createdBy` (`createdBy`),
-  KEY `modifiedBy` (`modifiedBy`)
-) ENGINE=InnoDB AUTO_INCREMENT=29 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
---
--- Volcado de datos para la tabla `visits`
---
-
-INSERT INTO `visits` (`id`, `patient`, `date`, `weight`, `height`, `perimeter`, `bloodPressure`, `diagnosis`, `treatment`, `createdBy`, `createdAt`, `modifiedBy`, `modifiedAt`) VALUES
-(28, 6, '2018-09-24', '123', '132', '132', '132/789', 'asd', NULL, 1, '2018-09-25 01:47:45', 1, '2018-09-25 01:51:00');
+  `modifiedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 --
 -- Disparadores `visits`
@@ -180,13 +132,78 @@ DELIMITER ;
 --
 
 DROP TABLE IF EXISTS `visits_files`;
-CREATE TABLE IF NOT EXISTS `visits_files` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+CREATE TABLE `visits_files` (
+  `id` int(11) NOT NULL,
   `visit` int(11) NOT NULL,
-  `name` varchar(256) COLLATE utf8_unicode_ci NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `visit` (`visit`)
-) ENGINE=InnoDB AUTO_INCREMENT=138 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+  `name` varchar(256) COLLATE utf8_unicode_ci NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+--
+-- Índices para tablas volcadas
+--
+
+--
+-- Indices de la tabla `patients`
+--
+ALTER TABLE `patients`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `lastname` (`lastname`),
+  ADD KEY `name` (`name`),
+  ADD KEY `doc` (`doc`),
+  ADD KEY `createdBy` (`createdBy`),
+  ADD KEY `modifiedBy` (`modifiedBy`);
+
+--
+-- Indices de la tabla `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `email` (`email`);
+
+--
+-- Indices de la tabla `visits`
+--
+ALTER TABLE `visits`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `patient` (`patient`),
+  ADD KEY `date` (`date`),
+  ADD KEY `createdBy` (`createdBy`),
+  ADD KEY `modifiedBy` (`modifiedBy`);
+
+--
+-- Indices de la tabla `visits_files`
+--
+ALTER TABLE `visits_files`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `visit` (`visit`);
+
+--
+-- AUTO_INCREMENT de las tablas volcadas
+--
+
+--
+-- AUTO_INCREMENT de la tabla `patients`
+--
+ALTER TABLE `patients`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de la tabla `users`
+--
+ALTER TABLE `users`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de la tabla `visits`
+--
+ALTER TABLE `visits`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de la tabla `visits_files`
+--
+ALTER TABLE `visits_files`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- Restricciones para tablas volcadas
