@@ -36,11 +36,16 @@ class Patient {
 				$newResponse = $response->withJson($this->visit->readByPatient($args["id"]));
 			}
 		} else {
-			$collection = $this->readAll($request);
-			if (!$collection) {
-				$newResponse = $response->withJson($this->badRequest(), 400);
-			} else {
-				$newResponse = $response->withJson($collection);
+			$search = strpos($request->getUri()->getPath(), "search");
+			if ($search === false) {
+				$collection = $this->readAll($request);
+				if (!$collection) {
+					$newResponse = $response->withJson($this->badRequest(), 400);
+				} else {
+					$newResponse = $response->withJson($collection);
+				}
+			} else if (array_key_exists("terms", $args) && strlen(trim($args["terms"]))) {
+				$newResponse = $response->withJson($this->search($args["terms"]));
 			}
 		}
 		return $newResponse;
@@ -176,9 +181,9 @@ class Patient {
 					return false;
 				}
 				if (substr($parameters[0], 0, 1) === '-') {
-					$query = $query->where(ltrim($parameters[0], '-'), 'like', '%' . $parameters[1] . '%');
+					$query = $query->where(ltrim($parameters[0], '-'), 'like', $parameters[1]);
 				} else {
-					$query = $query->orWhere($parameters[0], 'like', '%' . $parameters[1] . '%');
+					$query = $query->orWhere($parameters[0], 'like', $parameters[1]);
 				}
 			}
 		}
@@ -287,5 +292,41 @@ class Patient {
 	public function delete($id) {
 		$this->logger->info("Deleting a patient");
 		return $this->table->where('id', $id)->delete();
+	}
+
+	public function search($terms) {
+		$this->logger->info("Searching patients");
+
+		$searchTerms = explode(' ', $terms);
+		$terms = '';
+		foreach ($searchTerms as $term) {
+			$terms .= $term . '%';
+		}
+
+		$query = $this->table;
+		$query = $query->whereRaw("TRIM(CONCAT(LOWER(name),LOWER(lastname))) LIKE '%" . $terms . "'");
+		$query = $query->orWhereRaw("TRIM(CONCAT(LOWER(lastname),LOWER(name))) LIKE '%" . $terms . "'");
+		$query = $query->orderByRaw("TRIM(CONCAT(LOWER(name),LOWER(lastname)))");
+
+		$data = [];
+		$resources = $query->get();
+
+		foreach ($resources as $resource) {
+			$id = $resource->id;
+			unset($resource->id);
+			$resourceData = [
+				"attributes" => $resource,
+				"id" => $id,
+				"type" => $this->resourceType,
+			];
+			$data[] = $resourceData;
+		}
+		$collection = [
+			"data" => $data,
+			"links" => [
+				"self" => $this->url,
+			],
+		];
+		return $collection;
 	}
 }
