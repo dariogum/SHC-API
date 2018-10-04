@@ -306,7 +306,7 @@ class Patient {
 		$query = $this->table;
 		$query = $query->whereRaw("TRIM(CONCAT(LOWER(name),LOWER(lastname))) LIKE '%" . $terms . "'");
 		$query = $query->orWhereRaw("TRIM(CONCAT(LOWER(lastname),LOWER(name))) LIKE '%" . $terms . "'");
-		$query = $query->orderByRaw("TRIM(CONCAT(LOWER(name),LOWER(lastname)))");
+		$query = $query->orderByRaw("TRIM(CONCAT(LOWER(lastname),LOWER(name)))");
 
 		$data = [];
 		$resources = $query->get();
