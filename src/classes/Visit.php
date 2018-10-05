@@ -253,7 +253,7 @@ class Visit {
 
 		$data = [];
 		$visitsQueryBuilder = clone $this->table;
-		$resources = $visitsQueryBuilder->where('patient', $patientId)->get();
+		$resources = $visitsQueryBuilder->where('patient', $patientId)->orderBy('date', 'desc')->get();
 
 		foreach ($resources as $resource) {
 			$id = $resource->id;
