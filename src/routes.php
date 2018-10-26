@@ -39,6 +39,8 @@ $app->post('/v1/files', \App\Classes\File::class);
 $app->patch('/v1/files/{id:\d+}', \App\Classes\File::class);
 $app->delete('/v1/files/{id:\d+}', \App\Classes\File::class);
 
+$app->get('/v1/users', \App\Classes\User::class);
+$app->get('/v1/users/search/{terms}', \App\Classes\User::class);
 $app->get('/v1/users/{id:\d+}', \App\Classes\User::class);
 $app->post('/v1/users', \App\Classes\User::class);
 $app->post('/v1/users/login', \App\Classes\User::class);
