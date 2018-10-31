@@ -126,8 +126,8 @@ class Patient {
 	public function create($body) {
 		$this->logger->info("Creating a patient");
 
-		$body['data']['attributes']['lastname'] = ucwords(strtolower($body['data']['attributes']['lastname']));
-		$body['data']['attributes']['name'] = ucwords(strtolower($body['data']['attributes']['name']));
+		$body['data']['attributes']['lastname'] = mb_convert_case(mb_strtolower($body['data']['attributes']['lastname']), MB_CASE_TITLE, "UTF-8");
+		$body['data']['attributes']['name'] = mb_convert_case(mb_strtolower($body['data']['attributes']['name']), MB_CASE_TITLE, "UTF-8");
 
 		$id = $this->table->insertGetId($body['data']['attributes']);
 		if (!$id) {
