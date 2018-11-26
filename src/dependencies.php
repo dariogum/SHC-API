@@ -66,3 +66,19 @@ $container[\App\Classes\Stats::class] = function ($c) {
 	$visits = $c->get('db')->table('visits');
 	return new \App\Classes\Stats($logger, $patients, $users, $visits);
 };
+
+$container[\App\Classes\Schedule::class] = function ($c) {
+	$logger = $c->get('logger');
+	$schedules = $c->get('db')->table('schedules');
+	$schedulesDays = $c->get('db')->table('schedules_days');
+	$schedulesDaysHours = $c->get('db')->table('schedules_days_hours');
+	$schedulesProfessionals = $c->get('db')->table('schedules_professionals');
+	return new \App\Classes\Schedule($logger, $schedules, $schedulesDays,
+		$schedulesDaysHours, $schedulesProfessionals);
+};
+
+$container[\App\Classes\Appointment::class] = function ($c) {
+	$logger = $c->get('logger');
+	$appointments = $c->get('db')->table('appointments');
+	return new \App\Classes\Appointment($logger, $appointments);
+};
