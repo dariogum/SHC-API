@@ -333,10 +333,6 @@ class Schedule {
 		return $collection;
 	}
 
-	private function readDaysBySchedule($id) {
-		return [];
-	}
-
 	private function readValidSchedules($start, $end) {
 		$query = $this->table;
 		$query = $query->whereRaw("validityStart<='" . $start .

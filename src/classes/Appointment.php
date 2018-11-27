@@ -29,16 +29,16 @@ class Appointment {
 				$newResponse = $response->withJson($resource);
 			}
 		} else {
-			$search = strpos($request->getUri()->getPath(), "search");
-			if ($search === false) {
+			$bySchedules = strpos($request->getUri()->getPath(), "bySchedules");
+			if ($bySchedules === false) {
 				$collection = $this->readAll($request);
 				if (!$collection) {
 					$newResponse = $response->withJson($this->badRequest(), 400);
 				} else {
 					$newResponse = $response->withJson($collection);
 				}
-			} else if (array_key_exists("terms", $args) && strlen(trim($args["terms"]))) {
-				$newResponse = $response->withJson($this->search($args["terms"]));
+			} else {
+				$newResponse = $response->withJson($this->getAppointmentsBySchedules($args["date"], $args["schedules"]));
 			}
 		}
 		return $newResponse;
@@ -281,19 +281,12 @@ class Appointment {
 		return $this->table->where('id', $id)->delete();
 	}
 
-	public function search($terms) {
-		$this->logger->info("Searching appointments");
-
-		$searchTerms = explode(' ', $terms);
-		$terms = '';
-		foreach ($searchTerms as $term) {
-			$terms .= $term . '%';
-		}
-
+	private function getAppointmentsBySchedules($date, $schedules) {
 		$query = $this->table;
-		$query = $query->whereRaw("TRIM(LOWER(name)) LIKE '%" . $terms . "'");
-		$query = $query->orderByRaw("TRIM(LOWER(name))");
+		$query = $query->where('date', $date);
+		$query = $query->whereRaw('schedule IN (' . $schedules . ')');
 
+		/** Getting the appointments **/
 		$data = [];
 		$resources = $query->get();
 

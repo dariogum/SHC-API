@@ -57,7 +57,7 @@ $app->patch('/v1/schedules/{id:\d+}', \App\Classes\Schedule::class);
 $app->delete('/v1/schedules/{id:\d+}', \App\Classes\Schedule::class);
 
 $app->get('/v1/appointments', \App\Classes\Appointment::class);
-$app->get('/v1/appointments/search/{terms}', \App\Classes\Appointment::class);
+$app->get('/v1/appointments/bySchedules/{date}/{schedules}', \App\Classes\Appointment::class);
 $app->get('/v1/appointments/{id:\d+}', \App\Classes\Appointment::class);
 $app->post('/v1/appointments', \App\Classes\Appointment::class);
 $app->patch('/v1/appointments/{id:\d+}', \App\Classes\Appointment::class);
