@@ -73,8 +73,10 @@ $container[\App\Classes\Schedule::class] = function ($c) {
 	$schedulesDays = $c->get('db')->table('schedules_days');
 	$schedulesDaysHours = $c->get('db')->table('schedules_days_hours');
 	$schedulesProfessionals = $c->get('db')->table('schedules_professionals');
+	$appointments = $c->get('db')->table('appointments');
+	$patient = $c->get(\App\Classes\Patient::class);
 	return new \App\Classes\Schedule($logger, $schedules, $schedulesDays,
-		$schedulesDaysHours, $schedulesProfessionals);
+		$schedulesDaysHours, $schedulesProfessionals, $appointments, $patient);
 };
 
 $container[\App\Classes\Appointment::class] = function ($c) {

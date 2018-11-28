@@ -15,13 +15,17 @@ class Schedule {
 	private $schedulesDays;
 	private $schedulesDaysHours;
 	private $schedulesProfessionals;
+	private $appointments;
+	private $patient;
 
-	public function __construct(LoggerInterface $logger, Builder $table, Builder $schedulesDays, Builder $schedulesDaysHours, Builder $schedulesProfessionals) {
+	public function __construct(LoggerInterface $logger, Builder $table, Builder $schedulesDays, Builder $schedulesDaysHours, Builder $schedulesProfessionals, Builder $appointments, Patient $patient) {
 		$this->logger = $logger;
 		$this->table = $table;
 		$this->schedulesDays = $schedulesDays;
 		$this->schedulesDaysHours = $schedulesDaysHours;
 		$this->schedulesProfessionals = $schedulesProfessionals;
+		$this->appointments = $appointments;
+		$this->patient = $patient;
 	}
 
 	private function get(Request $request, Response $response, $args) {
@@ -35,7 +39,7 @@ class Schedule {
 				$newResponse = $response->withJson($resource);
 			}
 		} else if (array_key_exists("start", $args) && array_key_exists("end", $args)) {
-			$collection = $this->readValidSchedules($args["start"], $args["end"]);
+			$collection = $this->readDays($args["start"], $args["end"]);
 			if (!$collection) {
 				$newResponse = $response->withJson($this->badRequest(), 400);
 			} else {
@@ -250,7 +254,7 @@ class Schedule {
 				"id" => $id,
 				"type" => $this->resourceType,
 				"relationships" => [
-					"days" => $this->readDaysBySchedule($id),
+					"days" => [],
 				],
 			],
 			"links" => [
@@ -358,6 +362,87 @@ class Schedule {
 			],
 		];
 		return $collection;
+	}
+
+	private function readDays($start, $end) {
+		$schedules = $this->table
+			->whereRaw("validityStart<='" . $start . "' AND (validityEnd>='" . $end . "' OR validityEnd IS NULL)")
+			->get();
+		$data = [];
+
+		if ($schedules) {
+			$startDate = new \DateTime($start);
+			$endDate = new \DateTime($end);
+			while ($startDate <= $endDate) {
+				$resourceData = [
+					"attributes" => [
+						"date" => $startDate->format('Ymd'),
+					],
+					"type" => "day",
+					"relationships" => [
+						"appointments" => $this->getAppointments($startDate, $schedules),
+					],
+				];
+				$data[] = $resourceData;
+
+				$startDate->modify('+1 day');
+			}
+		}
+
+		$collection = [
+			"data" => $data,
+			"links" => [
+				"self" => $this->url . '/' . $start . '/' . $end,
+			],
+		];
+		return $collection;
+	}
+
+	private function getAppointments($date, $schedules) {
+		$appointments = [];
+		foreach ($schedules as $schedule) {
+			$querySchedulesDays = clone $this->schedulesDays;
+			$querySchedulesDays->where('schedule', $schedule->id);
+			if ($schedule->periodicity === 1) {
+				$querySchedulesDays->where('weekDay', $date->format('N') - 1);
+			} else {
+				$querySchedulesDays->where('date', $date->format('Y-m-d'));
+			}
+			$querySchedulesDays->where('active', 1);
+			$day = $querySchedulesDays->first();
+
+			if ($day) {
+				$querySchedulesDaysHours = clone $this->schedulesDaysHours;
+				$hours = $querySchedulesDaysHours->where('day', $day->id)->get();
+				if ($hours) {
+					foreach ($hours as $hour) {
+						$start = \DateTime::createFromFormat('H:i:s', $hour->start);
+						$end = \DateTime::createFromFormat('H:i:s', $hour->end);
+						while ($start < $end) {
+							$queryAppointments = clone $this->appointments;
+							$appointment = $queryAppointments->where('date', $date->format('Y-m-d'))
+								->where('schedule', $schedule->id)
+								->where('hour', $start->format('H:i:s'))
+								->first();
+							if ($appointment) {
+								$appointment->hour = \DateTime::createFromFormat('H:i:s', $appointment->hour)->format('H:i');
+								$appointment->color = $schedule->color;
+								$appointment->patient = $this->patient->readById($appointment->patient);
+								array_push($appointments, $appointment);
+							} else {
+								array_push($appointments, [
+									'date' => $date->format('Ymd'),
+									'hour' => $start->format('H:i'),
+									'color' => $schedule->color,
+								]);
+							}
+							$start->modify('+' . $schedule->appointmentInterval . ' minutes');
+						}
+					}
+				}
+			}
+		}
+		return $appointments;
 	}
 
 }
