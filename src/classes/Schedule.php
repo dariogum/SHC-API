@@ -8,24 +8,35 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Log\LoggerInterface;
 
 class Schedule {
+	private $appointments;
 	private $logger;
+	private $patient;
 	private $resourceType = "schedule";
-	private $table;
-	private $url = "schedules";
 	private $schedulesDays;
 	private $schedulesDaysHours;
 	private $schedulesProfessionals;
-	private $appointments;
-	private $patient;
+	private $table;
+	private $url = "schedules";
+	private $user;
 
-	public function __construct(LoggerInterface $logger, Builder $table, Builder $schedulesDays, Builder $schedulesDaysHours, Builder $schedulesProfessionals, Builder $appointments, Patient $patient) {
+	public function __construct(
+		Builder $appointments,
+		LoggerInterface $logger,
+		Patient $patient,
+		Builder $table,
+		Builder $schedulesDays,
+		Builder $schedulesDaysHours,
+		Builder $schedulesProfessionals,
+		User $user
+	) {
+		$this->appointments = $appointments;
 		$this->logger = $logger;
-		$this->table = $table;
+		$this->patient = $patient;
 		$this->schedulesDays = $schedulesDays;
 		$this->schedulesDaysHours = $schedulesDaysHours;
 		$this->schedulesProfessionals = $schedulesProfessionals;
-		$this->appointments = $appointments;
-		$this->patient = $patient;
+		$this->table = $table;
+		$this->user = $user;
 	}
 
 	private function get(Request $request, Response $response, $args) {
@@ -45,19 +56,23 @@ class Schedule {
 			} else {
 				$newResponse = $response->withJson($collection);
 			}
+		} else if (strpos($request->getUri()->getPath(), "search") !== false
+			&& array_key_exists("terms", $args) && strlen(trim($args["terms"]))) {
+			$collection = $this->search($args["terms"]);
+			if (!$collection) {
+				$newResponse = $response->withJson($this->badRequest(), 400);
+			} else {
+				$newResponse = $response->withJson($collection);
+			}
 		} else {
-			$search = strpos($request->getUri()->getPath(), "search");
-			if ($search === false) {
-				$collection = $this->readAll($request);
-				if (!$collection) {
-					$newResponse = $response->withJson($this->badRequest(), 400);
-				} else {
-					$newResponse = $response->withJson($collection);
-				}
-			} else if (array_key_exists("terms", $args) && strlen(trim($args["terms"]))) {
-				$newResponse = $response->withJson($this->search($args["terms"]));
+			$collection = $this->readAll($request);
+			if (!$collection) {
+				$newResponse = $response->withJson($this->badRequest(), 400);
+			} else {
+				$newResponse = $response->withJson($collection);
 			}
 		}
+
 		return $newResponse;
 	}
 
@@ -428,6 +443,7 @@ class Schedule {
 								$appointment->hour = \DateTime::createFromFormat('H:i:s', $appointment->hour)->format('H:i');
 								$appointment->color = $schedule->color;
 								$appointment->patient = $this->patient->readById($appointment->patient);
+								$appointment->proffesional = $this->user->readById($appointment->professional);
 								array_push($appointments, $appointment);
 							} else {
 								array_push($appointments, [
