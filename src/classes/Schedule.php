@@ -41,20 +41,19 @@ class Schedule {
 
 	private function get(Request $request, Response $response, $args) {
 		$newResponse = null;
-
-		if (array_key_exists("id", $args)) {
+		if (array_key_exists("id", $args) && array_key_exists("start", $args) && array_key_exists("end", $args)) {
+			$collection = $this->readScheduleDays($args["id"], $args["start"], $args["end"]);
+			if (!$collection) {
+				$newResponse = $response->withJson($this->badRequest(), 400);
+			} else {
+				$newResponse = $response->withJson($collection);
+			}
+		} else if (array_key_exists("id", $args)) {
 			$resource = $this->readById($args["id"]);
 			if (!$resource) {
 				$newResponse = $response->withJson($this->resourceNotFound(), 404);
 			} else {
 				$newResponse = $response->withJson($resource);
-			}
-		} else if (array_key_exists("start", $args) && array_key_exists("end", $args)) {
-			$collection = $this->readDays($args["start"], $args["end"]);
-			if (!$collection) {
-				$newResponse = $response->withJson($this->badRequest(), 400);
-			} else {
-				$newResponse = $response->withJson($collection);
 			}
 		} else if (strpos($request->getUri()->getPath(), "search") !== false
 			&& array_key_exists("terms", $args) && strlen(trim($args["terms"]))) {
@@ -258,9 +257,13 @@ class Schedule {
 		$this->logger->info("Getting a schedule");
 
 		$resourceAttributes = $this->table->find($id);
+
 		if (!$resourceAttributes) {
 			return false;
 		}
+
+		$professionals = $this->readScheduleProfessionals($resourceAttributes);
+		$days = $this->readScheduleDays($resourceAttributes);
 		unset($resourceAttributes->id);
 
 		$resource = [
@@ -269,12 +272,12 @@ class Schedule {
 				"id" => $id,
 				"type" => $this->resourceType,
 				"relationships" => [
-					"days" => [],
+					"days" => $days,
+					"professionals" => $professionals,
 				],
 			],
 			"links" => [
 				"self" => $this->url . "/" . $id,
-				"related" => $this->url . "/" . $id . "/days",
 			],
 		];
 		return $resource;
@@ -293,6 +296,9 @@ class Schedule {
 		if (!$resourceAttributes) {
 			return false;
 		}
+
+		$professionals = $this->readScheduleProfessionals($resource);
+		$days = $this->readScheduleDays($resource);
 		unset($resourceAttributes->id);
 
 		$resource = [
@@ -301,7 +307,8 @@ class Schedule {
 				"id" => $id,
 				"type" => $this->resourceType,
 				"relationships" => [
-					"days" => $this->readDaysBySchedule($id),
+					"days" => $days,
+					"professionals" => $professionals,
 				],
 			],
 			"links" => [
@@ -317,145 +324,161 @@ class Schedule {
 		return $this->table->where('id', $id)->delete();
 	}
 
-	public function search($terms) {
-		$this->logger->info("Searching schedules");
-
-		$searchTerms = explode(' ', $terms);
-		$terms = '';
-		foreach ($searchTerms as $term) {
-			$terms .= $term . '%';
-		}
-
-		$query = $this->table;
-		$query = $query->whereRaw("TRIM(LOWER(name)) LIKE '%" . $terms . "'");
-		$query = $query->orderByRaw("TRIM(LOWER(name))");
-
+	private function readScheduleProfessionals($schedule) {
+		$query = clone $this->schedulesProfessionals;
+		$professionals = $query->where("schedule", $schedule->id)->get();
 		$data = [];
-		$resources = $query->get();
-
-		foreach ($resources as $resource) {
-			$id = $resource->id;
-			unset($resource->id);
-			$resourceData = [
-				"attributes" => $resource,
-				"id" => $id,
-				"type" => $this->resourceType,
-			];
-			$data[] = $resourceData;
+		if ($professionals) {
+			foreach ($professionals as $professional) {
+				$id = $professional->id;
+				unset($professional->id);
+				$data[] = [
+					"attributes" => $professional,
+					"id" => $id,
+					"type" => "user",
+				];
+			}
 		}
-		$collection = [
-			"data" => $data,
-			"links" => [
-				"self" => $this->url,
-			],
-		];
-		return $collection;
+		return $data;
 	}
 
-	private function readValidSchedules($start, $end) {
-		$query = $this->table;
-		$query = $query->whereRaw("validityStart<='" . $start .
-			"' AND (validityEnd>='" . $end . "' OR validityEnd IS NULL)");
-
-		$data = [];
-		$resources = $query->get();
-
-		foreach ($resources as $resource) {
-			$id = $resource->id;
-			unset($resource->id);
-			$resourceData = [
-				"attributes" => $resource,
-				"id" => $id,
-				"type" => $this->resourceType,
-			];
-			$data[] = $resourceData;
+	private function readScheduleDays($schedule, $startDate = false, $endDate = false) {
+		if ($startDate && $endDate) {
+			$startDate = new \DateTime($startDate);
+			$endDate = new \DateTime($endDate);
+			return $this->readScheduleDaysAndAppointments($schedule, $startDate, $endDate);
 		}
-		$collection = [
-			"data" => $data,
-			"links" => [
-				"self" => $this->url,
-			],
-		];
-		return $collection;
-	}
 
-	private function readDays($start, $end) {
-		$schedules = $this->table
-			->whereRaw("validityStart<='" . $start . "' AND (validityEnd>='" . $end . "' OR validityEnd IS NULL)")
-			->get();
+		$query = clone $this->schedulesDays;
+		$days = $query->where("schedule", $schedule->id)->get();
 		$data = [];
-
-		if ($schedules) {
-			$startDate = new \DateTime($start);
-			$endDate = new \DateTime($end);
-			while ($startDate <= $endDate) {
-				$resourceData = [
-					"attributes" => [
-						"date" => $startDate->format('Ymd'),
-					],
+		if ($days) {
+			foreach ($days as $day) {
+				$hours = $this->readDaysHours($day);
+				$id = $day->id;
+				unset($day->id);
+				$data[] = [
+					"attributes" => $day,
+					"id" => $id,
 					"type" => "day",
 					"relationships" => [
-						"appointments" => $this->getAppointments($startDate, $schedules),
+						"hours" => $hours,
 					],
 				];
-				$data[] = $resourceData;
+			}
+		}
+		return $data;
+	}
 
+	private function readDaysHours($day) {
+		$query = clone $this->schedulesDaysHours();
+		$dayHours = $query->where("day", $day->id)->get();
+		$data = [];
+		if ($dayHours) {
+			foreach ($dayHours as $dayHour) {
+				$id = $dayHour->id;
+				unset($dayHour->id);
+				$data[] = [
+					"attributes" => $dayHour,
+					"id" => $id,
+					"type" => "dayHour",
+				];
+			}
+		}
+		return $data;
+	}
+
+	private function readScheduleDaysAndAppointments($schedule, $startDate, $endDate) {
+		$schedule = $this->table->find($schedule);
+		if ($schedule) {
+			$data = [];
+			while ($startDate <= $endDate) {
+				$query = clone $this->schedulesDays;
+				$query->where('schedule', $schedule->id);
+				if ($schedule->periodicity === 1) {
+					$query->where('weekDay', $startDate->format('N') - 1);
+				} else {
+					$query->where('date', $startDate->format('Y-m-d'));
+				}
+				$query->where('active', 1);
+				$day = $query->first();
+
+				if ($day) {
+					$hoursQuery = clone $this->schedulesDaysHours;
+					$hours = $hoursQuery->where("day", $day->id)->get();
+					if ($hours) {
+						$appointments = $this->getDateAppointments($schedule, $startDate, $hours);
+						$id = $day->id;
+						unset($day->id);
+						$data[] = [
+							"attributes" => $day,
+							"id" => $id,
+							"type" => "day",
+							"relationships" => [
+								"appointments" => $appointments,
+							],
+						];
+					}
+				}
 				$startDate->modify('+1 day');
 			}
 		}
-
 		$collection = [
 			"data" => $data,
 			"links" => [
-				"self" => $this->url . '/' . $start . '/' . $end,
+				"self" => $this->url . '/' . $schedule->id . '/day',
 			],
 		];
 		return $collection;
 	}
 
-	private function getAppointments($date, $schedules) {
+	private function getDateAppointments($schedule, $date, $hours) {
 		$appointments = [];
-		foreach ($schedules as $schedule) {
-			$querySchedulesDays = clone $this->schedulesDays;
-			$querySchedulesDays->where('schedule', $schedule->id);
-			if ($schedule->periodicity === 1) {
-				$querySchedulesDays->where('weekDay', $date->format('N') - 1);
-			} else {
-				$querySchedulesDays->where('date', $date->format('Y-m-d'));
-			}
-			$querySchedulesDays->where('active', 1);
-			$day = $querySchedulesDays->first();
-
-			if ($day) {
-				$querySchedulesDaysHours = clone $this->schedulesDaysHours;
-				$hours = $querySchedulesDaysHours->where('day', $day->id)->get();
-				if ($hours) {
-					foreach ($hours as $hour) {
-						$start = \DateTime::createFromFormat('H:i:s', $hour->start);
-						$end = \DateTime::createFromFormat('H:i:s', $hour->end);
-						while ($start < $end) {
-							$queryAppointments = clone $this->appointments;
-							$appointment = $queryAppointments->where('date', $date->format('Y-m-d'))
-								->where('schedule', $schedule->id)
-								->where('hour', $start->format('H:i:s'))
-								->first();
-							if ($appointment) {
-								$appointment->hour = \DateTime::createFromFormat('H:i:s', $appointment->hour)->format('H:i');
-								$appointment->color = $schedule->color;
-								$appointment->patient = $this->patient->readById($appointment->patient);
-								$appointment->proffesional = $this->user->readById($appointment->professional);
-								array_push($appointments, $appointment);
-							} else {
-								array_push($appointments, [
-									'date' => $date->format('Ymd'),
-									'hour' => $start->format('H:i'),
-									'color' => $schedule->color,
-								]);
-							}
-							$start->modify('+' . $schedule->appointmentInterval . ' minutes');
-						}
-					}
+		foreach ($hours as $hour) {
+			$start = \DateTime::createFromFormat('H:i:s', $hour->start);
+			$end = \DateTime::createFromFormat('H:i:s', $hour->end);
+			while ($start < $end) {
+				$query = clone $this->appointments;
+				$resource = $query->where('date', $date->format('Y-m-d'))
+					->where('schedule', $schedule->id)
+					->where('hour', $start->format('H:i:s'))
+					->first();
+				if ($resource) {
+					$professional = $this->user->readById($resource->professional);
+					$patient = $this->patient->readById($resource->patient);
+					unset($professional["data"]["attributes"]->password);
+					$id = $resource->id;
+					unset($resource->id);
+					$appointments[] = [
+						"attributes" => $resource,
+						"id" => $id,
+						"type" => "appointment",
+						"relationships" => [
+							"patient" => $patient,
+							"proffesional" => $professional,
+						],
+					];
+				} else {
+					$appointments[] = [
+						"type" => "appointment",
+						"attributes" => [
+							"confirmed" => null,
+							"date" => $date->format('Y-m-d'),
+							"id" => null,
+							"indications" => null,
+							"hour" => $start->format('H:i'),
+							"patient" => null,
+							"printed" => null,
+							"professional" => null,
+							"reminderData" => null,
+							"reminderSent" => null,
+							"reminderWay" => null,
+							"reprogrammed" => null,
+							"schedule" => $schedule->id,
+						],
+					];
 				}
+				$start->modify('+' . $schedule->appointmentInterval . ' minutes');
 			}
 		}
 		return $appointments;

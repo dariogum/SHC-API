@@ -48,16 +48,13 @@ $app->patch('/v1/users/{id:\d+}', \App\Classes\User::class);
 $app->delete('/v1/users/{id:\d+}', \App\Classes\User::class);
 
 $app->get('/v1/schedules', \App\Classes\Schedule::class);
-$app->get('/v1/schedules/search/{terms}', \App\Classes\Schedule::class);
 $app->get('/v1/schedules/{id:\d+}', \App\Classes\Schedule::class);
-$app->get('/v1/schedules/{id:\d+}/days', \App\Classes\Schedule::class);
-$app->get('/v1/schedules/{start}/{end}', \App\Classes\Schedule::class);
+$app->get('/v1/schedules/{id:\d+}/{start}/{end}', \App\Classes\Schedule::class);
 $app->post('/v1/schedules', \App\Classes\Schedule::class);
 $app->patch('/v1/schedules/{id:\d+}', \App\Classes\Schedule::class);
 $app->delete('/v1/schedules/{id:\d+}', \App\Classes\Schedule::class);
 
 $app->get('/v1/appointments', \App\Classes\Appointment::class);
-$app->get('/v1/appointments/bySchedules/{date}/{schedules}', \App\Classes\Appointment::class);
 $app->get('/v1/appointments/{id:\d+}', \App\Classes\Appointment::class);
 $app->post('/v1/appointments', \App\Classes\Appointment::class);
 $app->patch('/v1/appointments/{id:\d+}', \App\Classes\Appointment::class);
