@@ -449,13 +449,14 @@ class Schedule {
 					unset($professional["data"]["attributes"]->password);
 					$id = $resource->id;
 					unset($resource->id);
+					$resource->hour = \DateTime::createFromFormat('H:i:s', $resource->hour)->format('H:i');
 					$appointments[] = [
 						"attributes" => $resource,
 						"id" => $id,
 						"type" => "appointment",
 						"relationships" => [
 							"patient" => $patient,
-							"proffesional" => $professional,
+							"professional" => $professional,
 						],
 					];
 				} else {
