@@ -270,8 +270,8 @@ class Patient
     {
         $this->logger->info("Updating a patient");
 
-        $body['data']['attributes']['lastname'] = ucwords(strtolower($body['data']['attributes']['lastname']));
-        $body['data']['attributes']['name'] = ucwords(strtolower($body['data']['attributes']['name']));
+        $body['data']['attributes']['lastname'] = mb_convert_case(mb_strtolower($body['data']['attributes']['lastname']), MB_CASE_TITLE, "UTF-8");
+        $body['data']['attributes']['name'] = mb_convert_case(mb_strtolower($body['data']['attributes']['name']), MB_CASE_TITLE, "UTF-8");
 
         $status = $this->table->where('id', $id)->update($body["data"]["attributes"]);
         if (!$status) {

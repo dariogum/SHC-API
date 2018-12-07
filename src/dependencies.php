@@ -91,5 +91,7 @@ $container[\App\Classes\Schedule::class] = function ($c) {
 $container[\App\Classes\Appointment::class] = function ($c) {
 	$logger = $c->get('logger');
 	$appointments = $c->get('db')->table('appointments');
-	return new \App\Classes\Appointment($logger, $appointments);
+	$patient = $c->get(\App\Classes\Patient::class);
+	$user = $c->get(\App\Classes\User::class);
+	return new \App\Classes\Appointment($logger, $appointments, $patient, $user);
 };

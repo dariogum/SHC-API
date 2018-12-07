@@ -230,7 +230,8 @@ class User {
 	public function readById($id) {
 		$this->logger->info("Getting a user");
 
-		$resourceAttributes = $this->table->find($id);
+		$query = clone $this->table;
+		$resourceAttributes = $query->find($id);
 		if (!$resourceAttributes) {
 			return false;
 		}
