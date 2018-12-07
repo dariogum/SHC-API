@@ -132,7 +132,6 @@ class Appointment {
 			],
 			"links" => [
 				"self" => $this->url . "/" . $id,
-				"related" => $this->url . "/" . $id . "/days",
 			],
 		];
 		return $resource;
