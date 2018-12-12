@@ -56,7 +56,8 @@ $container[\App\Classes\Patient::class] = function ($c) {
 $container[\App\Classes\User::class] = function ($c) {
 	$logger = $c->get('logger');
 	$table = $c->get('db')->table('users');
-	return new \App\Classes\User($logger, $table);
+	$users_roles = $c->get('db')->table('users_roles');
+	return new \App\Classes\User($logger, $table, $users_roles);
 };
 
 $container[\App\Classes\Stats::class] = function ($c) {

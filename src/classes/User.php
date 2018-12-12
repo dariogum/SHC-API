@@ -11,11 +11,13 @@ class User {
 	private $logger;
 	private $resourceType = "user";
 	private $table;
+	private $users_roles;
 	private $url = "users";
 
-	public function __construct(LoggerInterface $logger, Builder $table) {
+	public function __construct(LoggerInterface $logger, Builder $table, Builder $users_roles) {
 		$this->logger = $logger;
 		$this->table = $table;
+		$this->users_roles = $users_roles;
 	}
 
 	private function get(Request $request, Response $response, $args) {
@@ -27,6 +29,13 @@ class User {
 				$newResponse = $response->withJson($this->resourceNotFound(), 404);
 			} else {
 				$newResponse = $response->withJson($resource);
+			}
+		} else if (strpos($request->getUri()->getPath(), "professionals")) {
+			$collection = $this->readAllProfessionals($request);
+			if (!$collection) {
+				$newResponse = $response->withJson($this->badRequest(), 400);
+			} else {
+				$newResponse = $response->withJson($collection);
 			}
 		} else {
 			$search = strpos($request->getUri()->getPath(), "search");
@@ -217,6 +226,36 @@ class User {
 				"type" => $this->resourceType,
 			];
 			$data[] = $resourceData;
+		}
+		$collection = [
+			"data" => $data,
+			"links" => [
+				"self" => $this->url,
+			],
+		];
+		return $collection;
+	}
+
+	public function readAllProfessionals($request) {
+		$this->logger->info("Getting all the professionals");
+		$data = [];
+
+		$queryUsersRoles = clone $this->users_roles;
+		$users_roles = $queryUsersRoles->where("role", "medic")->get();
+		foreach ($users_roles as $user_role) {
+			$query = clone $this->table;
+			$resourceAttributes = $query->find($user_role->user);
+			if ($resourceAttributes) {
+				$id = $resourceAttributes->id;
+				unset($resourceAttributes->id);
+				$resource = [
+					"attributes" => $resourceAttributes,
+					"id" => $id,
+					"type" => $this->resourceType,
+				];
+				$data[] = $resource;
+			}
+
 		}
 		$collection = [
 			"data" => $data,
