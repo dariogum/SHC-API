@@ -6,15 +6,15 @@ use Slim\Http\Response;
 // Routes
 
 $app->add(function ($req, $res, $next) {
-	$response = $next($req, $res);
-	return $response
-		->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-		->withHeader('Access-Control-Allow-Methods', 'GET, POST, HEAD, OPTIONS, PATCH, DELETE');
+    $response = $next($req, $res);
+    return $response
+        ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+        ->withHeader('Access-Control-Allow-Methods', 'GET, POST, HEAD, OPTIONS, PATCH, DELETE');
 });
 
 $app->get('/v1', function (Request $request, Response $response, array $args) {
-	$this->logger->info("/v1 visited");
-	return $response->withJson(["jsonapi" => ["version" => "1.0"]]);
+    $this->logger->info("/v1 visited");
+    return $response->withJson(["jsonapi" => ["version" => "1.0"]]);
 });
 
 $app->get('/v1/patients', \App\Classes\Patient::class);
@@ -60,3 +60,10 @@ $app->get('/v1/appointments/{id:\d+}', \App\Classes\Appointment::class);
 $app->post('/v1/appointments', \App\Classes\Appointment::class);
 $app->patch('/v1/appointments/{id:\d+}', \App\Classes\Appointment::class);
 $app->delete('/v1/appointments/{id:\d+}', \App\Classes\Appointment::class);
+
+$app->get('/v1/applications', \App\Classes\Application::class);
+$app->get('/v1/applications/{id:\d+}', \App\Classes\Application::class);
+$app->get('/v1/applications/byPatient/{patient:\d+}', \App\Classes\Application::class);
+$app->post('/v1/applications', \App\Classes\Application::class);
+$app->patch('/v1/applications/{id:\d+}', \App\Classes\Application::class);
+$app->delete('/v1/applications/{id:\d+}', \App\Classes\Application::class);

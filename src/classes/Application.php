@@ -7,42 +7,17 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Log\LoggerInterface;
 
-class Appointment
+class Application
 {
     private $logger;
-    private $resourceType = "appointment";
-    private $patient;
-    private $professional;
+    private $resourceType = "application";
     private $table;
-    private $url = "appointments";
+    private $url = "applications";
 
-    public function __construct(LoggerInterface $logger, Builder $table, Patient $patient, User $professional)
+    public function __construct(LoggerInterface $logger, Builder $table)
     {
         $this->logger = $logger;
-        $this->patient = $patient;
-        $this->professional = $professional;
         $this->table = $table;
-    }
-
-    private function get(Request $request, Response $response, $args)
-    {
-        $newResponse = null;
-        if (array_key_exists("id", $args)) {
-            $resource = $this->readById($args["id"]);
-            if (!$resource) {
-                $newResponse = $response->withJson($this->resourceNotFound(), 404);
-            } else {
-                $newResponse = $response->withJson($resource);
-            }
-        } else {
-            $collection = $this->readAll($request);
-            if (!$collection) {
-                $newResponse = $response->withJson($this->badRequest(), 400);
-            } else {
-                $newResponse = $response->withJson($collection);
-            }
-        }
-        return $newResponse;
     }
 
     public function __invoke(Request $request, Response $response, $args)
@@ -88,6 +63,29 @@ class Appointment
         return $newResponse;
     }
 
+    private function get(Request $request, Response $response, $args)
+    {
+        $newResponse = null;
+        if (array_key_exists("id", $args)) {
+            $resource = $this->readById($args["id"]);
+            if (!$resource) {
+                $newResponse = $response->withJson($this->resourceNotFound(), 404);
+            } else {
+                $newResponse = $response->withJson($resource);
+            }
+        } elseif (strpos($request->getUri()->getPath(), "byPatient")) {
+            $newResponse = $response->withJson($this->readByPatient($args["patient"]));
+        } else {
+            $collection = $this->readAll($request);
+            if (!$collection) {
+                $newResponse = $response->withJson($this->badRequest(), 400);
+            } else {
+                $newResponse = $response->withJson($collection);
+            }
+        }
+        return $newResponse;
+    }
+
     private function resourceNotFound()
     {
         return [
@@ -123,25 +121,18 @@ class Appointment
 
     public function create($body)
     {
-        $this->logger->info("Creating an appointment");
+        $this->logger->info("Creating an application");
 
         $id = $this->table->insertGetId($body['data']['attributes']);
         if (!$id) {
             return false;
         }
 
-        $professional = $this->professional->readById($body['data']['attributes']['professional']);
-        $patient = $this->patient->readById($body['data']['attributes']['patient']);
-
         $resource = [
             "data" => [
                 "attributes" => $body['data']['attributes'],
                 "id" => $id,
                 "type" => $this->resourceType,
-                "relationships" => [
-                    "patient" => $patient,
-                    "professional" => $professional,
-                ],
             ],
             "links" => [
                 "self" => $this->url . "/" . $id,
@@ -152,12 +143,12 @@ class Appointment
 
     public function readAll($request)
     {
-        $this->logger->info("Getting all the appointments");
+        $this->logger->info("Getting the applications");
 
         $query = $this->table;
 
         /** Sorting **/
-        /** Example: /appointments?sort=[-]attr1[,[-]attr2,..] **/
+        /** Example: /applications?sort=[-]attr1[,[-]attr2,..] **/
         $sort = $request->getParam('sort');
         if ($sort) {
             $columns = explode(',', $sort);
@@ -174,7 +165,7 @@ class Appointment
         }
 
         /** Filtering **/
-        /** Example: /appointments?filter=[-]attr1:string[,[-]attr2:string,..] **/
+        /** Example: /applications?filter=[-]attr1:string[,[-]attr2:string,..] **/
         $filter = $request->getParam('filter');
         if ($filter) {
             $terms = explode(',', $filter);
@@ -210,14 +201,11 @@ class Appointment
             }
         }
 
-        /** Getting the appointments **/
+        /** Getting the applications **/
         $data = [];
         $resources = $query->get();
 
         foreach ($resources as $resource) {
-            $professional = $this->professional->readById($resource->professional);
-            $patient = $this->patient->readById($resource->patient);
-
             $id = $resource->id;
             unset($resource->id);
 
@@ -225,10 +213,6 @@ class Appointment
                 "attributes" => $resource,
                 "id" => $id,
                 "type" => $this->resourceType,
-                "relationships" => [
-                    "patient" => $patient,
-                    "professional" => $professional,
-                ]
             ];
             $data[] = $resourceData;
         }
@@ -243,15 +227,13 @@ class Appointment
 
     public function readById($id)
     {
-        $this->logger->info("Getting an appointment");
+        $this->logger->info("Getting an application");
 
         $resourceAttributes = $this->table->find($id);
         if (!$resourceAttributes) {
             return false;
         }
 
-        $professional = $this->professional->readById($resourceAttributes->professional);
-        $patient = $this->patient->readById($resourceAttributes->patient);
         unset($resourceAttributes->id);
 
         $resource = [
@@ -259,14 +241,9 @@ class Appointment
                 "attributes" => $resourceAttributes,
                 "id" => $id,
                 "type" => $this->resourceType,
-                "relationships" => [
-                    "patient" => $patient,
-                    "professional" => $professional,
-                ]
             ],
             "links" => [
                 "self" => $this->url . "/" . $id,
-                "related" => $this->url . "/" . $id . "/days",
             ],
         ];
         return $resource;
@@ -274,7 +251,7 @@ class Appointment
 
     public function update($id, $body)
     {
-        $this->logger->info("Updating an appointment");
+        $this->logger->info("Updating an application");
 
         $query = clone $this->table;
         $status = $this->table->where('id', $id)->update($body["data"]["attributes"]);
@@ -284,12 +261,11 @@ class Appointment
 
         $query = clone $this->table;
         $resourceAttributes = $query->find($id);
+
         if (!$resourceAttributes) {
             return false;
         }
 
-        $professional = $this->professional->readById($resourceAttributes->professional);
-        $patient = $this->patient->readById($resourceAttributes->patient);
         unset($resourceAttributes->id);
 
         $resource = [
@@ -297,14 +273,9 @@ class Appointment
                 "attributes" => $resourceAttributes,
                 "id" => $id,
                 "type" => $this->resourceType,
-                "relationships" => [
-                    "patient" => $patient,
-                    "professional" => $professional,
-                ]
             ],
             "links" => [
                 "self" => $this->url . "/" . $id,
-                "related" => $this->url . "/" . $id . "/days",
             ],
         ];
         return $resource;
@@ -312,7 +283,35 @@ class Appointment
 
     public function delete($id)
     {
-        $this->logger->info("Deleting an appointment");
+        $this->logger->info("Deleting an application");
         return $this->table->where('id', $id)->delete();
+    }
+
+    private function readByPatient($patient)
+    {
+        $query = clone $this->table;
+        $query = $query->where('patient', $patient);
+
+        /** Getting the applications **/
+        $data = [];
+        $resources = $query->get();
+
+        foreach ($resources as $resource) {
+            $id = $resource->id;
+            unset($resource->id);
+            $resourceData = [
+                "attributes" => $resource,
+                "id" => $id,
+                "type" => $this->resourceType,
+            ];
+            $data[] = $resourceData;
+        }
+        $collection = [
+            "data" => $data,
+            "links" => [
+                "self" => $this->url,
+            ],
+        ];
+        return $collection;
     }
 }
