@@ -2,10 +2,17 @@
 -- version 4.5.4.1deb2ubuntu2.1
 -- http://www.phpmyadmin.net
 --
+<<<<<<< HEAD
 -- Servidor: localhost
 -- Tiempo de generación: 02-01-2019 a las 13:49:10
 -- Versión del servidor: 5.7.24-0ubuntu0.16.04.1
 -- Versión de PHP: 7.2.12-1+ubuntu16.04.1+deb.sury.org+1
+=======
+-- Servidor: 127.0.0.1:3306
+-- Tiempo de generación: 19-12-2018 a las 21:56:40
+-- Versión del servidor: 5.7.21
+-- Versión de PHP: 5.6.35
+>>>>>>> 1694447cb89cea8390510e57670b9ff99a92345f
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET time_zone = "+00:00";
@@ -19,6 +26,32 @@ SET time_zone = "+00:00";
 --
 -- Base de datos: `shc`
 --
+CREATE DATABASE IF NOT EXISTS `shc` DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci;
+USE `shc`;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `applications`
+--
+
+DROP TABLE IF EXISTS `applications`;
+CREATE TABLE IF NOT EXISTS `applications` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `patient` int(11) NOT NULL,
+  `date` date NOT NULL,
+  `age` int(11) NOT NULL,
+  `vaccine` int(11) NOT NULL,
+  `dose` int(11) NOT NULL,
+  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `patient` (`patient`),
+  KEY `date` (`date`),
+  KEY `age` (`age`),
+  KEY `vaccine` (`vaccine`),
+  KEY `dose` (`dose`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -43,8 +76,18 @@ CREATE TABLE `appointments` (
   `reminderWay` int(11) DEFAULT NULL,
   `reminderData` text COLLATE utf8_unicode_ci,
   `reminderSent` tinyint(1) DEFAULT '0',
+<<<<<<< HEAD
   `reminderSentAt` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+=======
+  `reminderSentAt` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `schedule` (`schedule`),
+  KEY `date` (`date`),
+  KEY `patient` (`patient`),
+  KEY `professional` (`professional`)
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+>>>>>>> 1694447cb89cea8390510e57670b9ff99a92345f
 
 -- --------------------------------------------------------
 
@@ -52,9 +95,15 @@ CREATE TABLE `appointments` (
 -- Estructura de tabla para la tabla `patients`
 --
 
+<<<<<<< HEAD
 CREATE TABLE `patients` (
   `id` int(11) NOT NULL,
   `oldId` int(11) DEFAULT NULL,
+=======
+DROP TABLE IF EXISTS `patients`;
+CREATE TABLE IF NOT EXISTS `patients` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+>>>>>>> 1694447cb89cea8390510e57670b9ff99a92345f
   `lastname` varchar(256) COLLATE utf8_unicode_ci NOT NULL,
   `name` varchar(256) COLLATE utf8_unicode_ci NOT NULL,
   `birthday` date DEFAULT NULL,
@@ -71,10 +120,15 @@ CREATE TABLE `patients` (
   `floor` varchar(16) COLLATE utf8_unicode_ci DEFAULT NULL,
   `apartment` varchar(16) COLLATE utf8_unicode_ci DEFAULT NULL,
   `socialSecurity1` int(11) DEFAULT NULL,
+<<<<<<< HEAD
   `socialSecurity1Plan` varchar(256) COLLATE utf8_unicode_ci DEFAULT NULL,
   `socialSecurity1Number` varchar(128) COLLATE utf8_unicode_ci DEFAULT NULL,
   `socialSecurity2` int(11) DEFAULT NULL,
   `socialSecurity2Plan` varchar(256) COLLATE utf8_unicode_ci DEFAULT NULL,
+=======
+  `socialSecurity1Number` varchar(128) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `socialSecurity2` int(11) DEFAULT NULL,
+>>>>>>> 1694447cb89cea8390510e57670b9ff99a92345f
   `socialSecurity2Number` varchar(128) COLLATE utf8_unicode_ci DEFAULT NULL,
   `birthType` int(11) DEFAULT NULL,
   `weightNewborn` decimal(10,0) DEFAULT NULL,
@@ -91,12 +145,27 @@ CREATE TABLE `patients` (
   `createdBy` int(11) NOT NULL DEFAULT '1',
   `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `modifiedBy` int(11) NOT NULL DEFAULT '1',
+<<<<<<< HEAD
   `modifiedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+=======
+  `modifiedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `lastname` (`lastname`),
+  KEY `name` (`name`),
+  KEY `doc` (`doc`),
+  KEY `createdBy` (`createdBy`),
+  KEY `modifiedBy` (`modifiedBy`)
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+>>>>>>> 1694447cb89cea8390510e57670b9ff99a92345f
 
 --
 -- Disparadores `patients`
 --
+<<<<<<< HEAD
+=======
+DROP TRIGGER IF EXISTS `PatientsModifiedAt`;
+>>>>>>> 1694447cb89cea8390510e57670b9ff99a92345f
 DELIMITER $$
 CREATE TRIGGER `PatientsModifiedAt` BEFORE UPDATE ON `patients` FOR EACH ROW SET NEW.modifiedAt = NOW()
 $$
@@ -115,9 +184,16 @@ CREATE TABLE `schedules` (
   `appointmentInterval` int(11) NOT NULL,
   `validityStart` date NOT NULL,
   `validityEnd` date DEFAULT NULL,
+<<<<<<< HEAD
   `color` varchar(7) DEFAULT NULL,
   `active` tinyint(1) NOT NULL DEFAULT '1'
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+=======
+  `color` varchar(7) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `active` tinyint(1) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+>>>>>>> 1694447cb89cea8390510e57670b9ff99a92345f
 
 -- --------------------------------------------------------
 
@@ -130,6 +206,7 @@ CREATE TABLE `schedules_days` (
   `schedule` int(11) NOT NULL,
   `date` date DEFAULT NULL,
   `weekDay` int(11) DEFAULT NULL,
+<<<<<<< HEAD
   `active` tinyint(1) NOT NULL DEFAULT '1'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
@@ -146,12 +223,20 @@ CREATE TABLE `schedules_days_hours` (
   `end` time NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
+=======
+  `active` tinyint(1) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  KEY `schedule` (`schedule`)
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+>>>>>>> 1694447cb89cea8390510e57670b9ff99a92345f
 -- --------------------------------------------------------
 
 --
 -- Estructura de tabla para la tabla `schedules_professionals`
 --
 
+<<<<<<< HEAD
 CREATE TABLE `schedules_professionals` (
   `schedule` int(11) NOT NULL,
   `user` int(11) NOT NULL
@@ -183,12 +268,25 @@ CREATE TABLE `users_roles` (
   `role` varchar(16) CHARACTER SET latin1 NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
+=======
+DROP TABLE IF EXISTS `schedules_days_hours`;
+CREATE TABLE IF NOT EXISTS `schedules_days_hours` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `day` int(11) NOT NULL,
+  `start` time NOT NULL,
+  `end` time NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `schedule` (`day`) USING BTREE
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+>>>>>>> 1694447cb89cea8390510e57670b9ff99a92345f
 -- --------------------------------------------------------
 
 --
 -- Estructura de tabla para la tabla `visits`
 --
 
+<<<<<<< HEAD
 CREATE TABLE `visits` (
   `id` int(11) NOT NULL,
   `patient` int(11) NOT NULL,
@@ -214,6 +312,16 @@ CREATE TRIGGER `VisitsModifiedAt` BEFORE UPDATE ON `visits` FOR EACH ROW SET NEW
 $$
 DELIMITER ;
 
+=======
+DROP TABLE IF EXISTS `schedules_professionals`;
+CREATE TABLE IF NOT EXISTS `schedules_professionals` (
+  `schedule` int(11) NOT NULL,
+  `user` int(11) NOT NULL,
+  PRIMARY KEY (`schedule`,`user`) USING BTREE,
+  KEY `user` (`user`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+>>>>>>> 1694447cb89cea8390510e57670b9ff99a92345f
 -- --------------------------------------------------------
 
 --
@@ -227,11 +335,15 @@ CREATE TABLE `visits_files` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 --
+<<<<<<< HEAD
 -- Índices para tablas volcadas
 --
 
 --
 -- Indices de la tabla `appointments`
+=======
+-- Volcado de datos para la tabla `users`
+>>>>>>> 1694447cb89cea8390510e57670b9ff99a92345f
 --
 ALTER TABLE `appointments`
   ADD PRIMARY KEY (`id`),
@@ -272,6 +384,7 @@ ALTER TABLE `schedules_days_hours`
   ADD KEY `day` (`day`);
 
 --
+<<<<<<< HEAD
 -- Indices de la tabla `schedules_professionals`
 --
 ALTER TABLE `schedules_professionals`
@@ -280,6 +393,9 @@ ALTER TABLE `schedules_professionals`
 
 --
 -- Indices de la tabla `users`
+=======
+-- Volcado de datos para la tabla `users_roles`
+>>>>>>> 1694447cb89cea8390510e57670b9ff99a92345f
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
@@ -290,6 +406,59 @@ ALTER TABLE `users`
 --
 ALTER TABLE `users_roles`
   ADD PRIMARY KEY (`user`,`role`);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `visits`
+--
+
+DROP TABLE IF EXISTS `visits`;
+CREATE TABLE IF NOT EXISTS `visits` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `patient` int(11) NOT NULL,
+  `date` date NOT NULL,
+  `weight` decimal(10,0) DEFAULT NULL,
+  `height` decimal(10,0) DEFAULT NULL,
+  `perimeter` decimal(10,0) DEFAULT NULL,
+  `bloodPressure` varchar(7) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `diagnosis` text COLLATE utf8_unicode_ci NOT NULL,
+  `treatment` text COLLATE utf8_unicode_ci,
+  `studiesResults` text COLLATE utf8_unicode_ci,
+  `createdBy` int(11) NOT NULL DEFAULT '1',
+  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `modifiedBy` int(11) NOT NULL DEFAULT '1',
+  `modifiedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `patient` (`patient`),
+  KEY `date` (`date`),
+  KEY `createdBy` (`createdBy`),
+  KEY `modifiedBy` (`modifiedBy`)
+) ENGINE=InnoDB AUTO_INCREMENT=34 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+--
+-- Disparadores `visits`
+--
+DROP TRIGGER IF EXISTS `VisitsModifiedAt`;
+DELIMITER $$
+CREATE TRIGGER `VisitsModifiedAt` BEFORE UPDATE ON `visits` FOR EACH ROW SET NEW.modifiedAt = NOW()
+$$
+DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `visits_files`
+--
+
+DROP TABLE IF EXISTS `visits_files`;
+CREATE TABLE IF NOT EXISTS `visits_files` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `visit` int(11) NOT NULL,
+  `name` varchar(256) COLLATE utf8_unicode_ci NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `visit` (`visit`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 --
 -- Indices de la tabla `visits`
@@ -357,6 +526,12 @@ ALTER TABLE `visits_files`
 --
 
 --
+-- Filtros para la tabla `applications`
+--
+ALTER TABLE `applications`
+  ADD CONSTRAINT `applications_ibfk_1` FOREIGN KEY (`patient`) REFERENCES `patients` (`id`);
+
+--
 -- Filtros para la tabla `appointments`
 --
 ALTER TABLE `appointments`
@@ -409,6 +584,10 @@ ALTER TABLE `visits`
 --
 ALTER TABLE `visits_files`
   ADD CONSTRAINT `visit` FOREIGN KEY (`visit`) REFERENCES `visits` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+<<<<<<< HEAD
+=======
+COMMIT;
+>>>>>>> 1694447cb89cea8390510e57670b9ff99a92345f
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
