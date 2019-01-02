@@ -14,7 +14,7 @@ $app->add(function ($req, $res, $next) {
 
 $app->get('/v1', function (Request $request, Response $response, array $args) {
     $this->logger->info("/v1 visited");
-    return $response->withJson(["jsonapi" => ["version" => "1.0"]]);
+    return $response->withJson(["jsonapi" => ["version" => "2.0"]]);
 });
 
 $app->get('/v1/patients', \App\Classes\Patient::class);
@@ -22,7 +22,7 @@ $app->get('/v1/patients/search/{terms}', \App\Classes\Patient::class);
 $app->get('/v1/patients/{id:\d+}', \App\Classes\Patient::class);
 $app->get('/v1/patients/{id:\d+}/visits', \App\Classes\Patient::class);
 $app->post('/v1/patients', \App\Classes\Patient::class);
-$app->patch('/v1/patients/{id:\d+}', \App\Classes\Patient::class);
+$app->put('/v1/patients/{id:\d+}', \App\Classes\Patient::class);
 $app->delete('/v1/patients/{id:\d+}', \App\Classes\Patient::class);
 
 $app->get('/v1/visits', \App\Classes\Visit::class);
