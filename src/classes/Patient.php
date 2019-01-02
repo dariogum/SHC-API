@@ -53,22 +53,32 @@ class Patient
         ]);
     }
 
-    private function read($request, $response, $args)
+    private function read($request, $response, $args, $responseCode = 200)
     {
+        $data = null;
         if (array_key_exists("id", $args)) {
-            $resource = $this->table->find($args["id"]);
-            if ($resource) {
-                return $response->withJson($this->parse($resource), 200);
-            }
-            return $response->withJson($resource, 404);
+            $data = $this->table->find($args["id"]);
         } else {
-            $resources = $this->table->get();
-            return $response->withJson($this->parse($resources), 200);
+            $data = $this->table->get();
         }
+        if ($data) {
+            return $response->withJson($this->parse($data), $responseCode);
+        }
+        return $response->withJson(null, 404);
     }
 
     private function create($request, $response, $args)
-    {}
+    {
+        $body = $request->getParsedBody();
+        $body['data']['attributes']['lastname'] = mb_convert_case(mb_strtolower($body['data']['attributes']['lastname']), MB_CASE_TITLE, "UTF-8");
+        $body['data']['attributes']['name'] = mb_convert_case(mb_strtolower($body['data']['attributes']['name']), MB_CASE_TITLE, "UTF-8");
+        $created = $this->table->insertGetId($body['data']['attributes']);
+        if ($created) {
+            $args["id"] = $created;
+            return $this->read($request, $response, $args, 201);
+        }
+        return $response->withJson(null, 409);
+    }
 
     private function update($request, $response, $args)
     {
@@ -81,10 +91,18 @@ class Patient
                 return $this->read($request, $response, $args);
             }
         }
+        return $response->withJson(null, 409);
     }
 
     private function delete($request, $response, $args)
-    {}
+    {
+        if (array_key_exists("id", $args)) {
+            if ($this->table->where('id', $args["id"])->delete()){
+                return $response->withJson(null, 200);
+            }
+            return $response->withJson(null, 404);
+        }
+    }
 
     private function parse($data)
     {
