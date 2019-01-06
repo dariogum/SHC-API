@@ -56,10 +56,12 @@ class Patient
     private function read($request, $response, $args, $responseCode = 200)
     {
         $data = null;
-        if (array_key_exists("id", $args)) {
+        if (array_key_exists("term", $args)) {
+            $data = $this->search($args["term"]);
+        } else if (array_key_exists("id", $args)) {
             $data = $this->table->find($args["id"]);
         } else {
-            $data = $this->table->get();
+            $data = $this->table->orderBy('updated_at','desc')->limit(10)->get();
         }
         if ($data) {
             return $response->withJson($this->parse($data), $responseCode);
@@ -132,5 +134,14 @@ class Patient
                 "self" => "/" . $this->url . "/" . $id,
             ],
         ];
+    }
+
+    private function search($term)
+    {
+        $query = clone $this->table;
+        $query = $query->whereRaw("REPLACE(CONCAT(LOWER(name),LOWER(lastname)),' ','') LIKE '%" . $term . "%'");
+        $query = $query->orWhereRaw("REPLACE(CONCAT(LOWER(lastname),LOWER(name)),' ','') LIKE '%" . $term . "%'");
+        $query = $query->orderByRaw("REPLACE(CONCAT(LOWER(lastname),LOWER(name)),' ','')");
+        return $query->get();
     }
 }

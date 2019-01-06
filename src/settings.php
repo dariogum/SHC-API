@@ -20,7 +20,7 @@ return [
 		'db' => [
 			'driver' => 'mysql',
 			'host' => 'localhost',
-			'database' => 'shc',
+			'database' => 'shc_new',
 			'username' => 'root',
 			'password' => '',
 			'charset' => 'utf8',

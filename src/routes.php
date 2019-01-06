@@ -18,7 +18,7 @@ $app->get('/v1', function (Request $request, Response $response, array $args) {
 });
 
 $app->get('/v1/patients', \App\Classes\Patient::class);
-$app->get('/v1/patients/search/{terms}', \App\Classes\Patient::class);
+$app->get('/v1/patients/search/{term}', \App\Classes\Patient::class);
 $app->get('/v1/patients/{id:\d+}', \App\Classes\Patient::class);
 $app->get('/v1/patients/{id:\d+}/visits', \App\Classes\Patient::class);
 $app->post('/v1/patients', \App\Classes\Patient::class);
