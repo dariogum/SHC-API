@@ -52,7 +52,7 @@ class Patient
             ],
         ]);
     }
-
+            
     private function read($request, $response, $args, $responseCode = 200)
     {
         $data = null;
@@ -99,7 +99,7 @@ class Patient
     private function delete($request, $response, $args)
     {
         if (array_key_exists("id", $args)) {
-            if ($this->table->where('id', $args["id"])->delete()){
+            if ($this->table->where('id', $args["id"])->delete()) {
                 return $response->withJson(null, 200);
             }
             return $response->withJson(null, 404);
