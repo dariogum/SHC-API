@@ -49,8 +49,19 @@ $container[\App\Classes\Visit::class] = function ($c) {
 $container[\App\Classes\Patient::class] = function ($c) {
     $logger = $c->get('logger');
     $table = $c->get('db')->table('patients');
-    $visit = $c->get(\App\Classes\Visit::class);
-    return new \App\Classes\Patient($logger, $table, $visit);
+    return new \App\Classes\Patient($logger, $table);
+};
+
+$container[\App\Classes\PatientBackground::class] = function ($c) {
+    $logger = $c->get('logger');
+    $table = $c->get('db')->table('patients_background');
+    return new \App\Classes\PatientBackground($logger, $table);
+};
+
+$container[\App\Classes\PatientSocialSecurity::class] = function ($c) {
+    $logger = $c->get('logger');
+    $table = $c->get('db')->table('patients_social_securities');
+    return new \App\Classes\PatientSocialSecurity($logger, $table);
 };
 
 $container[\App\Classes\User::class] = function ($c) {

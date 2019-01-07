@@ -18,12 +18,21 @@ $app->get('/v1', function (Request $request, Response $response, array $args) {
 });
 
 $app->get('/v1/patients', \App\Classes\Patient::class);
-$app->get('/v1/patients/search/{term}', \App\Classes\Patient::class);
 $app->get('/v1/patients/{id:\d+}', \App\Classes\Patient::class);
-$app->get('/v1/patients/{id:\d+}/visits', \App\Classes\Patient::class);
+$app->get('/v1/patients/search/{term}', \App\Classes\Patient::class);
 $app->post('/v1/patients', \App\Classes\Patient::class);
 $app->put('/v1/patients/{id:\d+}', \App\Classes\Patient::class);
 $app->delete('/v1/patients/{id:\d+}', \App\Classes\Patient::class);
+
+$app->get('/v1/patientsbackground/{patient:\d+}', \App\Classes\PatientBackground::class);
+$app->post('/v1/patientsbackground', \App\Classes\PatientBackground::class);
+$app->put('/v1/patientsbackground/{id:\d+}', \App\Classes\PatientBackground::class);
+$app->delete('/v1/patientsbackground/{id:\d+}', \App\Classes\PatientBackground::class);
+
+$app->get('/v1/patientssocialsecurity/{patient:\d+}', \App\Classes\PatientSocialSecurity::class);
+$app->post('/v1/patientssocialsecurity', \App\Classes\PatientSocialSecurity::class);
+$app->put('/v1/patientssocialsecurity/{id:\d+}', \App\Classes\PatientSocialSecurity::class);
+$app->delete('/v1/patientssocialsecurity/{id:\d+}', \App\Classes\PatientSocialSecurity::class);
 
 $app->get('/v1/visits', \App\Classes\Visit::class);
 $app->get('/v1/visits/{id:\d+}', \App\Classes\Visit::class);
