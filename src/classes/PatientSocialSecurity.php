@@ -10,14 +10,16 @@ use Psr\Log\LoggerInterface;
 class PatientSocialSecurity
 {
     private $logger;
-    private $table = "patients_social_securities";
+    private $socialSecurity;
+    private $table;
     private $type = "patientSocialSecurity";
     private $url = "patientssocialsecurity";
 
-    public function __construct(LoggerInterface $logger, Builder $table)
+    public function __construct(LoggerInterface $logger, Builder $table, SocialSecurity $socialSecurity)
     {
         $this->logger = $logger;
         $this->table = $table;
+        $this->socialSecurity = $socialSecurity;
     }
 
     public function __invoke(Request $request, Response $response, $args)
@@ -56,8 +58,12 @@ class PatientSocialSecurity
     private function read($request, $response, $args, $responseCode = 200)
     {
         $data = null;
-        if (array_key_exists("patient", $args)) {
-            $data = $this->table->where('patient', $args["patient"])->get();
+        if (array_key_exists("id", $args)) {
+            $query =  $this->table;
+            $data = $query->find($args["id"]);
+        } else if (array_key_exists("patient", $args)) {
+            $query =  $this->table;
+            $data = $query->where('patient', $args["patient"])->get();
         }
         if ($data) {
             return $response->withJson($this->parse($data), $responseCode);
@@ -80,18 +86,20 @@ class PatientSocialSecurity
     {
         if (array_key_exists("id", $args)) {
             $body = $request->getParsedBody();
-            $updated = $this->table->where('id', $args["id"])->update($body["data"]["attributes"]);
-            if ($updated) {
+            $query = clone $this->table;
+            $updated = $query->where('id', $args["id"])->update($body["data"]["attributes"]);
+            if ($updated || is_null($updated)) {
                 return $this->read($request, $response, $args);
             }
         }
-        return $response->withJson(null, 409);
+        return $response->withJson($updated, 409);
     }
 
     private function delete($request, $response, $args)
     {
         if (array_key_exists("id", $args)) {
-            if ($this->table->where('id', $args["id"])->delete()) {
+            $query = $this->table;
+            if ($query->where('id', $args["id"])->delete()) {
                 return $response->withJson(null, 200);
             }
             return $response->withJson(null, 404);
@@ -115,12 +123,17 @@ class PatientSocialSecurity
 
     private function parseResource($attributes)
     {
+        $socialSecurityTable = clone $this->socialSecurity->table;
+        $socialSecurityData = $socialSecurityTable->find($attributes->social_security);
+        $socialSecurity = $this->socialSecurity->parse($socialSecurityData);
         $id = $attributes->id;
         unset($attributes->id);
         return [
             "attributes" => $attributes,
             "id" => $id,
-            "relationships" => [],
+            "relationships" => [
+                "socialSecurity" => $socialSecurity
+            ],
             "type" => $this->type,
             "links" => [
                 "self" => "/" . $this->url . "/" . $id,

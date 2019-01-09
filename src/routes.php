@@ -34,6 +34,12 @@ $app->post('/v1/patientssocialsecurity', \App\Classes\PatientSocialSecurity::cla
 $app->put('/v1/patientssocialsecurity/{id:\d+}', \App\Classes\PatientSocialSecurity::class);
 $app->delete('/v1/patientssocialsecurity/{id:\d+}', \App\Classes\PatientSocialSecurity::class);
 
+$app->get('/v1/socialsecurities', \App\Classes\SocialSecurity::class);
+$app->get('/v1/socialsecurities/{id:\d+}', \App\Classes\SocialSecurity::class);
+$app->post('/v1/socialsecurities', \App\Classes\SocialSecurity::class);
+$app->put('/v1/socialsecurities/{id:\d+}', \App\Classes\SocialSecurity::class);
+$app->delete('/v1/socialsecurities/{id:\d+}', \App\Classes\SocialSecurity::class);
+
 $app->get('/v1/visits', \App\Classes\Visit::class);
 $app->get('/v1/visits/{id:\d+}', \App\Classes\Visit::class);
 $app->get('/v1/visits/{id:\d+}/files', \App\Classes\Visit::class);

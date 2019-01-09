@@ -58,10 +58,17 @@ $container[\App\Classes\PatientBackground::class] = function ($c) {
     return new \App\Classes\PatientBackground($logger, $table);
 };
 
+$container[\App\Classes\SocialSecurity::class] = function ($c) {
+    $logger = $c->get('logger');
+    $table = $c->get('db')->table('social_securities');
+    return new \App\Classes\SocialSecurity($logger, $table);
+};
+
 $container[\App\Classes\PatientSocialSecurity::class] = function ($c) {
     $logger = $c->get('logger');
     $table = $c->get('db')->table('patients_social_securities');
-    return new \App\Classes\PatientSocialSecurity($logger, $table);
+    $socialSecurity = $c->get(\App\Classes\SocialSecurity::class);
+    return new \App\Classes\PatientSocialSecurity($logger, $table, $socialSecurity);
 };
 
 $container[\App\Classes\User::class] = function ($c) {

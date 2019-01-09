@@ -7,12 +7,12 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Log\LoggerInterface;
 
-class Patient
+class SocialSecurity
 {
     private $logger;
-    private $table = "patients";
-    private $type = "patient";
-    private $url = "patients";
+    public $table = "social_securities";
+    private $type = "socialSecurity";
+    private $url = "socialsecurities";
 
     public function __construct(LoggerInterface $logger, Builder $table)
     {
@@ -56,12 +56,10 @@ class Patient
     private function read($request, $response, $args, $responseCode = 200)
     {
         $data = null;
-        if (array_key_exists("term", $args)) {
-            $data = $this->search($args["term"]);
-        } else if (array_key_exists("id", $args)) {
+        if (array_key_exists("id", $args)) {
             $data = $this->table->find($args["id"]);
         } else {
-            $data = $this->table->orderBy('updated_at','desc')->limit(10)->get();
+            $data = $this->table->orderBy('name')->get();
         }
         if ($data) {
             return $response->withJson($this->parse($data), $responseCode);
@@ -72,8 +70,6 @@ class Patient
     private function create($request, $response, $args)
     {
         $body = $request->getParsedBody();
-        $body['data']['attributes']['lastname'] = mb_convert_case(mb_strtolower($body['data']['attributes']['lastname']), MB_CASE_TITLE, "UTF-8");
-        $body['data']['attributes']['name'] = mb_convert_case(mb_strtolower($body['data']['attributes']['name']), MB_CASE_TITLE, "UTF-8");
         $created = $this->table->insertGetId($body['data']['attributes']);
         if ($created) {
             $args["id"] = $created;
@@ -86,11 +82,9 @@ class Patient
     {
         if (array_key_exists("id", $args)) {
             $body = $request->getParsedBody();
-            $body['data']['attributes']['lastname'] = mb_convert_case(mb_strtolower($body['data']['attributes']['lastname']), MB_CASE_TITLE, "UTF-8");
-            $body['data']['attributes']['name'] = mb_convert_case(mb_strtolower($body['data']['attributes']['name']), MB_CASE_TITLE, "UTF-8");
             $query = $this->table;
             $updated = $query->where('id', $args["id"])->update($body["data"]["attributes"]);
-            if ($updated || is_null($updated)) {
+            if ($updated) {
                 return $this->read($request, $response, $args);
             }
         }
@@ -108,7 +102,7 @@ class Patient
         }
     }
 
-    private function parse($data)
+    public function parse($data)
     {
         if (is_iterable($data)) {
             $parsedData = [];
@@ -136,14 +130,5 @@ class Patient
                 "self" => "/" . $this->url . "/" . $id,
             ],
         ];
-    }
-
-    private function search($term)
-    {
-        $query = clone $this->table;
-        $query = $query->whereRaw("REPLACE(CONCAT(LOWER(name),LOWER(lastname)),' ','') LIKE '%" . $term . "%'");
-        $query = $query->orWhereRaw("REPLACE(CONCAT(LOWER(lastname),LOWER(name)),' ','') LIKE '%" . $term . "%'");
-        $query = $query->orderByRaw("REPLACE(CONCAT(LOWER(lastname),LOWER(name)),' ','')");
-        return $query->get();
     }
 }
